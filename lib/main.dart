@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'screens/auth/login_screen.dart';
+import 'screens/order/order_screen.dart';
 import 'theme/theme.dart';
 
 void main() {
@@ -17,7 +17,7 @@ class LaapakApp extends StatelessWidget {
       theme: LaapakTheme.lightTheme,
       darkTheme: LaapakTheme.darkTheme,
       themeMode: ThemeMode.light,
-      home: const LoginScreen(),
+      home: const OrderScreen(),
     );
   }
 }

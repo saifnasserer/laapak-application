@@ -8,4 +8,5 @@
 /// ```
 export 'loading_button.dart';
 export 'dismiss_keyboard.dart';
+export 'device_specs_card.dart';
 
