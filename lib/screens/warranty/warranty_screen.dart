@@ -1,34 +1,30 @@
+import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../theme/theme.dart';
 import '../../utils/responsive.dart';
 import '../../widgets/dismiss_keyboard.dart';
+import '../../providers/reports_provider.dart';
+import '../../services/laapak_api_service.dart';
 
 /// Warranty Tracker Screen
 ///
 /// Displays warranty information and status based on report data.
 /// Shows warranty duration, expiry date, and status with daily countdown.
-class WarrantyScreen extends StatefulWidget {
-  const WarrantyScreen({super.key});
+class WarrantyScreen extends ConsumerStatefulWidget {
+  final String? reportId;
+
+  const WarrantyScreen({super.key, this.reportId});
 
   @override
-  State<WarrantyScreen> createState() => _WarrantyScreenState();
+  ConsumerState<WarrantyScreen> createState() => _WarrantyScreenState();
 }
 
-class _WarrantyScreenState extends State<WarrantyScreen> {
-  // Mock data - replace with actual API data
-  final Map<String, dynamic> reportData = {
-    'id': 'RPT123456',
-    'device_model': 'iPhone 15 Pro Max',
-    'serial_number': 'ABC123456789',
-    'inspection_date': '2024-01-15T10:00:00Z',
-    'status': 'active',
-    'created_at': '2024-01-15T10:00:00Z',
-  };
-
+class _WarrantyScreenState extends ConsumerState<WarrantyScreen> {
   @override
   void initState() {
     super.initState();
-    // Update every minute to show countdown
+    // Update every second to show countdown
     _startCountdownTimer();
   }
 
@@ -44,8 +40,52 @@ class _WarrantyScreenState extends State<WarrantyScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Calculate warranty info
-    final warrantyInfo = _calculateWarranty(reportData);
+    // If reportId is provided, watch that specific report
+    if (widget.reportId != null) {
+      final reportAsync = ref.watch(reportsProvider(widget.reportId!));
+
+      return Scaffold(
+        backgroundColor: LaapakColors.background,
+        appBar: AppBar(
+          title: Text(
+            'الضمان',
+            style: LaapakTypography.titleLarge(color: LaapakColors.textPrimary),
+          ),
+          centerTitle: true,
+          elevation: 0,
+        ),
+        body: SafeArea(
+          child: DismissKeyboard(
+            child: Directionality(
+              textDirection: TextDirection.rtl, // RTL for Arabic
+              child: reportAsync.when(
+                data: (data) {
+                  if (data == null) {
+                    return _buildErrorState('التقرير غير موجود');
+                  }
+                  return _buildWarrantyContent(data);
+                },
+                loading: () => _buildLoadingState(),
+                error: (error, stackTrace) {
+                  developer.log(
+                    '❌ Error loading report: $error',
+                    name: 'Warranty',
+                  );
+                  return _buildErrorState(
+                    error is LaapakApiException
+                        ? error.message
+                        : 'حدث خطأ في تحميل البيانات',
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Otherwise, watch clientReportsProvider for the latest report
+    final reportsAsync = ref.watch(clientReportsProvider);
 
     return Scaffold(
       backgroundColor: LaapakColors.background,
@@ -61,42 +101,111 @@ class _WarrantyScreenState extends State<WarrantyScreen> {
         child: DismissKeyboard(
           child: Directionality(
             textDirection: TextDirection.rtl, // RTL for Arabic
-            child: SingleChildScrollView(
-              physics: const ClampingScrollPhysics(),
-              padding: Responsive.screenPadding,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SizedBox(height: Responsive.lg),
-
-                  // Warranty Progress Bars
-                  _buildWarrantyProgressBars(warrantyInfo),
-
-                  SizedBox(height: Responsive.lg),
-
-                  // Device Specs
-                  // DeviceSpecsCard(
-                  //   deviceModel: reportData['device_model'],
-                  //   serialNumber: reportData['serial_number'],
-                  //   inspectionDate: reportData['inspection_date'],
-                  // ),
-
-                  // SizedBox(height: Responsive.lg),
-
-                  // Warranty Details Card
-                  _buildWarrantyDetailsCard(warrantyInfo),
-
-                  SizedBox(height: Responsive.lg),
-
-                  // Warranty Terms Card
-                  _buildWarrantyTermsCard(),
-
-                  SizedBox(height: Responsive.xl),
-                ],
-              ),
+            child: reportsAsync.when(
+              data: (reports) {
+                if (reports.isEmpty) {
+                  return _buildErrorState('لا توجد تقارير متاحة');
+                }
+                return _buildWarrantyContent(reports.first);
+              },
+              loading: () => _buildLoadingState(),
+              error: (error, stackTrace) {
+                developer.log(
+                  '❌ Error loading reports: $error',
+                  name: 'Warranty',
+                );
+                return _buildErrorState(
+                  error is LaapakApiException
+                      ? error.message
+                      : 'حدث خطأ في تحميل البيانات',
+                );
+              },
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  /// Build loading state
+  Widget _buildLoadingState() {
+    return Center(
+      child: CircularProgressIndicator(color: LaapakColors.primary),
+    );
+  }
+
+  /// Build error state
+  Widget _buildErrorState(String message) {
+    return Center(
+      child: Padding(
+        padding: Responsive.screenPadding,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 64, color: LaapakColors.error),
+            SizedBox(height: Responsive.lg),
+            Text(
+              message,
+              style: LaapakTypography.bodyLarge(
+                color: LaapakColors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: Responsive.lg),
+            ElevatedButton(
+              onPressed: () {
+                // Refresh the provider
+                if (widget.reportId != null) {
+                  ref.invalidate(reportsProvider(widget.reportId!));
+                } else {
+                  ref.invalidate(clientReportsProvider);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: LaapakColors.primary,
+                foregroundColor: Colors.white,
+              ),
+              child: Text('إعادة المحاولة'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Build warranty content
+  Widget _buildWarrantyContent(Map<String, dynamic> reportData) {
+    // Calculate warranty info
+    final warrantyInfo = _calculateWarranty(reportData);
+
+    return SingleChildScrollView(
+      physics: const ClampingScrollPhysics(),
+      padding: Responsive.screenPadding,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // SizedBox(height: Responsive.lg),
+
+          // Warranty Progress Bars
+          _buildWarrantyProgressBars(warrantyInfo),
+
+          SizedBox(height: Responsive.lg),
+
+          // Warranty Details Card
+          _buildWarrantyDetailsCard(warrantyInfo),
+
+          SizedBox(height: Responsive.lg),
+
+          // Warranty Terms Card
+          _buildWarrantyTermsCard(),
+
+          SizedBox(height: Responsive.lg),
+
+          // Maintenance Timeline Card
+          _buildMaintenanceTimelineCard(),
+
+          SizedBox(height: Responsive.xl),
+        ],
       ),
     );
   }
@@ -442,7 +551,7 @@ class _WarrantyScreenState extends State<WarrantyScreen> {
                       overflow: TextOverflow.ellipsis,
                     )
                   : Text(
-                      '$daysRemaining يوم',
+                      ' متبقي $daysRemaining يوم',
                       style: LaapakTypography.labelSmall(
                         color: LaapakColors.textSecondary,
                       ),
@@ -549,7 +658,7 @@ class _WarrantyScreenState extends State<WarrantyScreen> {
               )
             else
               Text(
-                'متبقي: $daysRemaining يوم ${hoursRemaining.toString().padLeft(2, '0')}:${minutesRemaining.toString().padLeft(2, '0')}:${secondsRemaining.toString().padLeft(2, '0')}',
+                'متبقي: $daysRemaining  يوم و ${hoursRemaining.toString().padLeft(2, '0')}:${minutesRemaining.toString().padLeft(2, '0')}:${secondsRemaining.toString().padLeft(2, '0')} ساعة',
                 style: LaapakTypography.labelSmall(
                   color: LaapakColors.textSecondary,
                 ),
@@ -631,22 +740,208 @@ class _WarrantyScreenState extends State<WarrantyScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'شروط الضمان',
+              'شروط الضمان الأساسية',
               style: LaapakTypography.titleLarge(
                 color: LaapakColors.textPrimary,
               ),
             ),
+            SizedBox(height: Responsive.lg),
+
+            // Warranty Exclusions
+            _buildTermSection(
+              icon: Icons.block_outlined,
+              title: 'استثناءات الضمان',
+              description:
+                  'لا يسري الضمان في حال وجود سوء استخدام، الكسر، أو الأضرار الناتجة عن الكهرباء ذات الجهد العالي أو ما شابه.',
+            ),
+
             SizedBox(height: Responsive.md),
-            _buildTermItem('الضمان يشمل عيوب الصناعة فقط'),
-            SizedBox(height: Responsive.sm),
-            _buildTermItem('لا يشمل السقوط أو تسرب السوائل'),
-            SizedBox(height: Responsive.sm),
-            _buildTermItem('لا يشمل محاولات الإصلاح خارج Fix Zone'),
-            SizedBox(height: Responsive.sm),
-            _buildTermItem('لا يشمل التعديلات غير المعتمدة'),
+
+            // Device Opening Exclusion
+            _buildTermSection(
+              icon: Icons.lock_open_outlined,
+              title: 'الاستثناء عند فتح الجهاز',
+              description:
+                  'لا يسري الضمان في حال تم إزالة الاستيكر الخاص بالشركة أو في حالة محاولة فتح أو صيانة الجهاز خارج الشركة.',
+            ),
+
+            SizedBox(height: Responsive.md),
+
+            // Manufacturing Defects Only
+            _buildTermSection(
+              icon: Icons.info_outline,
+              title: 'عيوب الصناعة فقط',
+              description:
+                  'يشمل الضمان فقط العيوب الناتجة عن التصنيع ولا يشمل الأعطال الناتجة عن البرمجيات أو أي مشاكل غير متعلقة بالأجزاء المادية.',
+            ),
           ],
         ),
       ),
+    );
+  }
+
+  /// Build a term section with minimal styling
+  Widget _buildTermSection({
+    required IconData icon,
+    required String title,
+    required String description,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              icon,
+              size: Responsive.iconSizeSmall,
+              color: LaapakColors.textSecondary,
+            ),
+            SizedBox(width: Responsive.xs),
+            Text(
+              title,
+              style: LaapakTypography.titleSmall(
+                color: LaapakColors.textPrimary,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: Responsive.xs),
+        Padding(
+          padding: EdgeInsets.only(
+            right: Responsive.iconSizeSmall + Responsive.xs,
+          ),
+          child: Text(
+            description,
+            style: LaapakTypography.bodyMedium(
+              color: LaapakColors.textSecondary,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Maintenance timeline card
+  Widget _buildMaintenanceTimelineCard() {
+    return Card(
+      child: Padding(
+        padding: Responsive.cardPaddingInsets,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.build_outlined,
+                  color: LaapakColors.textPrimary,
+                  size: Responsive.iconSizeMedium,
+                ),
+                SizedBox(width: Responsive.sm),
+                Text(
+                  'مراحل الصيانة الدورية في Laapak',
+                  style: LaapakTypography.titleLarge(
+                    color: LaapakColors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: Responsive.lg),
+            _buildTimelineItem(
+              icon: Icons.thermostat_outlined,
+              title: 'استبدال المعجون الحراري',
+              description:
+                  'باستخدام نوع عالي الجودة ومناسب لطبيعة الجهاز لضمان أفضل تبريد ممكن.',
+            ),
+            SizedBox(height: Responsive.md),
+            _buildTimelineItem(
+              icon: Icons.air_outlined,
+              title: 'إزالة الأكسدة من نظام التبريد',
+              description:
+                  'لتحسين نقل الحرارة بكفاءة، حيث تؤثر الأكسدة على كفاءة التبريد بنسبة قد تصل إلى 40%.',
+            ),
+            SizedBox(height: Responsive.md),
+            _buildTimelineItem(
+              icon: Icons.speed_outlined,
+              title: 'فحص سرعة مراوح التبريد',
+              description:
+                  'وفي حالة تأثرها بالأتربة، يتم تنظيفها وإعادتها لحالتها الطبيعية لضمان التهوية المثالية.',
+            ),
+            SizedBox(height: Responsive.md),
+            _buildTimelineItem(
+              icon: Icons.memory_outlined,
+              title: 'تنظيف اللوحة الأم بالكامل',
+              description:
+                  'شاملاً تنظيف جميع الفلاتات والوصلات بدقة لضمان استقرار الأداء.',
+            ),
+            SizedBox(height: Responsive.md),
+            _buildTimelineItem(
+              icon: Icons.search_outlined,
+              title: 'إجراء فحص شامل لكل مكونات الجهاز',
+              description:
+                  'لاكتشاف أي أعطال محتملة مبكرًا واتخاذ الإجراءات الوقائية اللازمة.',
+            ),
+            SizedBox(height: Responsive.md),
+            _buildTimelineItem(
+              icon: Icons.cleaning_services_outlined,
+              title: 'تنظيف خارجي كامل للجهاز',
+              description:
+                  'لإعادة مظهره كالجديد تمامًا، مما يعزز من تجربة الاستخدام والانطباع العام.',
+              isLast: true,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Build timeline item
+  Widget _buildTimelineItem({
+    required IconData icon,
+    required String title,
+    required String description,
+    bool isLast = false,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Icon with subtle background
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: LaapakColors.surfaceVariant,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            color: LaapakColors.textPrimary,
+            size: Responsive.iconSizeSmall,
+          ),
+        ),
+        SizedBox(width: Responsive.md),
+
+        // Content
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: LaapakTypography.titleSmall(
+                  color: LaapakColors.textPrimary,
+                ),
+              ),
+              SizedBox(height: Responsive.xs),
+              Text(
+                description,
+                style: LaapakTypography.bodyMedium(
+                  color: LaapakColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -664,30 +959,6 @@ class _WarrantyScreenState extends State<WarrantyScreen> {
             value,
             style: LaapakTypography.bodyMedium(color: LaapakColors.textPrimary),
             textAlign: TextAlign.end,
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// Build warranty term item
-  Widget _buildTermItem(String term) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          margin: EdgeInsets.only(top: Responsive.xs, left: Responsive.sm),
-          width: 6,
-          height: 6,
-          decoration: BoxDecoration(
-            color: LaapakColors.primary,
-            shape: BoxShape.circle,
-          ),
-        ),
-        Expanded(
-          child: Text(
-            term,
-            style: LaapakTypography.bodyMedium(color: LaapakColors.textPrimary),
           ),
         ),
       ],

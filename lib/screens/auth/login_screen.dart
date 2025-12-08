@@ -1,35 +1,72 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../theme/theme.dart';
 import '../../utils/responsive.dart';
 import '../../widgets/loading_button.dart';
 import '../../widgets/dismiss_keyboard.dart';
+import '../../providers/auth_provider.dart';
+import '../order/order_screen.dart';
 
 /// Login Screen
 ///
 /// Clean, minimal authentication screen following Laapak Design Guidelines.
 /// Arabic-first design with RTL support.
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
-  // Controllers for form fields (UI only, no logic)
+class _LoginScreenState extends ConsumerState<LoginScreen> {
+  // Controllers for form fields
   final _phoneController = TextEditingController();
   final _orderCodeController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-
-  // Loading state
-  bool _isLoading = false;
 
   @override
   void dispose() {
     _phoneController.dispose();
     _orderCodeController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Listen to auth state changes
+    ref.listenManual(authProvider, (previous, next) {
+      if (next.isAuthenticated && previous?.isAuthenticated != true) {
+        // Navigate to order screen on successful login
+        Future.microtask(() {
+          if (mounted) {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (context) => const OrderScreen(),
+              ),
+            );
+          }
+        });
+      }
+
+      // Show error if login fails
+      if (next.error != null && next.error!.isNotEmpty) {
+        Future.microtask(() {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(next.error!),
+                backgroundColor: LaapakColors.error,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+            // Clear error after showing
+            ref.read(authProvider.notifier).clearError();
+          }
+        });
+      }
+    });
   }
 
   @override
@@ -216,31 +253,21 @@ class _LoginScreenState extends State<LoginScreen> {
 
   /// Primary login button with solid color and loading state
   Widget _buildLoginButton() {
+    final authState = ref.watch(authProvider);
+
     return LoadingButton(
       text: 'تسجل دخول',
-      isLoading: _isLoading,
+      isLoading: authState.isLoading,
       onPressed: () {
         // Validate form
         if (_formKey.currentState?.validate() ?? false) {
-          // Defer setState to avoid build conflicts
-          Future.microtask(() {
-            if (mounted) {
-              setState(() {
-                _isLoading = true;
-              });
+          HapticFeedback.lightImpact();
 
-              HapticFeedback.lightImpact();
-
-              // Simulate login process (replace with actual API call)
-              Future.delayed(const Duration(seconds: 2)).then((_) {
-                if (mounted) {
-                  setState(() {
-                    _isLoading = false;
-                  });
-                }
-              });
-            }
-          });
+          // Call login through Riverpod
+          ref.read(authProvider.notifier).login(
+                phone: _phoneController.text.trim(),
+                orderCode: _orderCodeController.text.trim(),
+              );
         }
       },
     );

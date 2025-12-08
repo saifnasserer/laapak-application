@@ -75,6 +75,10 @@ class LaapakColors {
   /// Critical errors only, Warranty expired
   static const Color error = Color(0xFFD32F2F);
   
+  /// Blue (Informational)
+  /// Information, tips, general notices
+  static const Color info = Color(0xFF2196F3);
+  
   // ==================== Semantic Colors ====================
   
   /// Primary color for the app

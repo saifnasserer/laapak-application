@@ -22,7 +22,10 @@ class LaapakApiService {
   /// Base URL based on authentication method and environment
   String get baseUrl {
     if (useDevelopment) return _devBaseUrl;
-    return apiKey != null ? _apiKeyBaseUrl : _jwtBaseUrl;
+    // If API key is provided, use API key base URL
+    if (apiKey != null) return _apiKeyBaseUrl;
+    // Otherwise, use JWT base URL (for client login and authenticated requests)
+    return _jwtBaseUrl;
   }
   
   /// Headers for API requests
@@ -36,6 +39,8 @@ class LaapakApiService {
     } else if (jwtToken != null) {
       headers['x-auth-token'] = jwtToken!;
     }
+    // If neither is provided, headers will only have Content-Type
+    // This is allowed for client login endpoint
     
     return headers;
   }
@@ -46,15 +51,13 @@ class LaapakApiService {
   /// [jwtToken] - JWT token for user-based authentication
   /// [useDevelopment] - Use development server (default: false)
   /// 
-  /// Note: Either apiKey or jwtToken should be provided, not both
+  /// Note: For client login, neither apiKey nor jwtToken is required initially.
+  /// The JWT token will be obtained after successful login.
   LaapakApiService({
     this.apiKey,
     this.jwtToken,
     this.useDevelopment = false,
-  }) : assert(
-          apiKey != null || jwtToken != null,
-          'Either apiKey or jwtToken must be provided',
-        );
+  });
   
   /// Make HTTP request to API
   Future<Map<String, dynamic>> _makeRequest(
@@ -81,14 +84,51 @@ class LaapakApiService {
     final response = await http.Response.fromStream(streamedResponse);
     
     if (response.statusCode >= 200 && response.statusCode < 300) {
-      return jsonDecode(response.body) as Map<String, dynamic>;
+      // Handle empty response
+      if (response.body.isEmpty) {
+        return <String, dynamic>{};
+      }
+      
+      try {
+        final decoded = jsonDecode(response.body);
+        
+        // Handle different response types
+        if (decoded is Map<String, dynamic>) {
+          return decoded;
+        } else if (decoded is List) {
+          // If response is a list, wrap it in a map
+          return {'data': decoded};
+        } else {
+          // For other types, wrap in a map
+          return {'data': decoded};
+        }
+      } catch (e) {
+        // Log the actual response for debugging
+        print('API Response Error - Status: ${response.statusCode}');
+        print('Response body: ${response.body}');
+        print('Response headers: ${response.headers}');
+        throw LaapakApiException(
+          message: 'Invalid response format: ${e.toString()}',
+          errorCode: 'INVALID_RESPONSE',
+          statusCode: response.statusCode,
+        );
+      }
     } else {
-      final errorData = jsonDecode(response.body) as Map<String, dynamic>;
-      throw LaapakApiException(
-        message: errorData['message'] ?? 'Unknown error',
-        errorCode: errorData['error'] ?? 'UNKNOWN_ERROR',
-        statusCode: response.statusCode,
-      );
+      try {
+        final errorData = jsonDecode(response.body) as Map<String, dynamic>;
+        throw LaapakApiException(
+          message: errorData['message'] ?? 'Unknown error',
+          errorCode: errorData['error'] ?? 'UNKNOWN_ERROR',
+          statusCode: response.statusCode,
+        );
+      } catch (e) {
+        // If response body is not valid JSON, create a generic error
+        throw LaapakApiException(
+          message: 'Server error: ${response.statusCode} - ${response.body}',
+          errorCode: 'HTTP_ERROR',
+          statusCode: response.statusCode,
+        );
+      }
     }
   }
   
@@ -270,7 +310,11 @@ class LaapakApiService {
   
   // ==================== Reports ====================
   
-  /// Get client reports (API Key)
+  /// Get client reports (API Key or JWT)
+  /// 
+  /// Works with both API Key and JWT authentication
+  /// - API Key: Uses `/api/v2/external/clients/{client_id}/reports`
+  /// - JWT: Uses `/api/clients/{client_id}/reports` or `/api/reports` with client filter
   Future<Map<String, dynamic>> getClientReports(
     int clientId, {
     String? status,
@@ -282,7 +326,73 @@ class LaapakApiService {
     String? sortBy,
     String? sortOrder,
   }) async {
-    assert(apiKey != null, 'API key is required for this operation');
+    final queryParams = <String, String>{};
+    if (status != null) queryParams['status'] = status;
+    if (startDate != null) queryParams['startDate'] = startDate;
+    if (endDate != null) queryParams['endDate'] = endDate;
+    if (deviceModel != null) queryParams['deviceModel'] = deviceModel;
+    if (limit != null) queryParams['limit'] = limit.toString();
+    if (offset != null) queryParams['offset'] = offset.toString();
+    if (sortBy != null) queryParams['sortBy'] = sortBy;
+    if (sortOrder != null) queryParams['sortOrder'] = sortOrder;
+    
+    // Use different endpoints based on authentication method
+    if (apiKey != null) {
+      // API Key authentication - use external endpoint
+      return await _makeRequest(
+        '/clients/$clientId/reports',
+        'GET',
+        queryParams: queryParams,
+      );
+    } else if (jwtToken != null) {
+      // JWT authentication - try client-specific endpoint first, fallback to all reports with filter
+      try {
+        return await _makeRequest(
+          '/clients/$clientId/reports',
+          'GET',
+          queryParams: queryParams,
+        );
+      } catch (e) {
+        // If client-specific endpoint doesn't work, get all reports and filter by client
+        // This is a fallback for JWT authentication
+        queryParams['clientId'] = clientId.toString();
+        return await _makeRequest(
+          '/reports',
+          'GET',
+          queryParams: queryParams,
+        );
+      }
+    } else {
+      throw Exception('Either API key or JWT token is required');
+    }
+  }
+  
+  /// Get authenticated client's reports (JWT only)
+  /// 
+  /// Uses GET /api/reports/me endpoint
+  /// Automatically identifies the client from the JWT token
+  /// Returns only reports belonging to the authenticated client
+  /// 
+  /// Query Parameters:
+  /// - status: Filter by status (active, completed, cancelled, etc.)
+  /// - startDate: Filter from date (2024-01-01)
+  /// - endDate: Filter to date (2024-01-31)
+  /// - deviceModel: Filter by device model (partial match)
+  /// - limit: Number of results (default: 50, max: 100)
+  /// - offset: Pagination offset (default: 0)
+  /// - sortBy: Sort field (created_at, inspection_date, status, device_model)
+  /// - sortOrder: Sort direction (ASC, DESC)
+  Future<Map<String, dynamic>> getMyReports({
+    String? status,
+    String? startDate,
+    String? endDate,
+    String? deviceModel,
+    int? limit,
+    int? offset,
+    String? sortBy,
+    String? sortOrder,
+  }) async {
+    assert(jwtToken != null, 'JWT token is required for this operation');
     
     final queryParams = <String, String>{};
     if (status != null) queryParams['status'] = status;
@@ -295,7 +405,7 @@ class LaapakApiService {
     if (sortOrder != null) queryParams['sortOrder'] = sortOrder;
     
     return await _makeRequest(
-      '/clients/$clientId/reports',
+      '/reports/me',
       'GET',
       queryParams: queryParams,
     );
@@ -303,10 +413,16 @@ class LaapakApiService {
   
   /// Get specific report
   Future<Map<String, dynamic>> getReport(String reportId) async {
-    final endpoint = apiKey != null 
-        ? '/reports/$reportId'
-        : '/reports/$reportId';
-    return await _makeRequest(endpoint, 'GET');
+    final endpoint = '/reports/$reportId';
+    final response = await _makeRequest(endpoint, 'GET');
+    
+    // Handle different response formats
+    if (response['report'] != null) {
+      return response['report'] as Map<String, dynamic>;
+    } else if (response['data'] != null) {
+      return response['data'] as Map<String, dynamic>;
+    }
+    return response;
   }
   
   /// Get all reports (JWT - Admin)
@@ -436,6 +552,17 @@ class LaapakApiService {
         ? '/invoices/$invoiceId'
         : '/invoices/$invoiceId';
     return await _makeRequest(endpoint, 'GET');
+  }
+  
+  /// Get invoice print URL
+  /// 
+  /// Returns the URL for the invoice print view
+  /// The URL includes the token as a query parameter for easy browser access
+  String getInvoicePrintUrl(String invoiceId) {
+    assert(jwtToken != null, 'JWT token is required for this operation');
+    
+    final baseUrl = useDevelopment ? _devBaseUrl : _jwtBaseUrl;
+    return '$baseUrl/invoices/$invoiceId/print?token=$jwtToken';
   }
   
   /// Get all invoices (JWT - Admin)
