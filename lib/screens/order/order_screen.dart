@@ -154,17 +154,17 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
                       // Device Specs Card (using reusable component)
                       if (firstReport != null)
                         DeviceSpecsCard(
-                          deviceModel:
-                              firstReport['device_model']?.toString() ??
-                              'غير محدد',
-                          serialNumber:
-                              firstReport['serial_number']?.toString() ??
-                              'غير محدد',
+                          // deviceModel:
+                          //     firstReport['device_model']?.toString() ??
+                          //     'غير محدد',
+                          // serialNumber:
+                          //     firstReport['serial_number']?.toString() ??
+                          //     'غير محدد',
                           inspectionDate:
                               firstReport['inspection_date']?.toString() ??
                               firstReport['created_at']?.toString() ??
                               DateTime.now().toIso8601String(),
-                          deviceStatus: 'جيد',
+                          // deviceStatus: 'جيد',
                           additionalSpecs: _buildAdditionalSpecs(firstReport),
                         )
                       else
@@ -261,7 +261,7 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
         // Reports Button
         _buildNavButton(
           icon: Icons.description_outlined,
-          text: 'التقارير',
+          text: 'التقرير',
           onPressed: reportId != null
               ? () {
                   Navigator.push(
@@ -527,13 +527,13 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
     // Add GPU if available
     final gpu = report['gpu']?.toString();
     if (gpu != null && gpu.isNotEmpty && gpu != 'null') {
-      specs['معالج الرسوميات'] = gpu;
+      specs['كرت الشاشة'] = gpu;
     }
 
     // Add RAM if available
     final ram = report['ram']?.toString();
     if (ram != null && ram.isNotEmpty && ram != 'null') {
-      specs['الذاكرة'] = ram;
+      specs['الرامات'] = ram;
     }
 
     // Add Storage if available
