@@ -4,9 +4,18 @@ import 'screens/auth/login_screen.dart';
 import 'screens/order/order_screen.dart';
 import 'theme/theme.dart';
 import 'providers/auth_provider.dart';
+import 'providers/notification_provider.dart';
 
-void main() {
-  runApp(const ProviderScope(child: LaapakApp()));
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize notifications
+  final container = ProviderContainer();
+  container.read(initializeNotificationsProvider);
+
+  runApp(
+    UncontrolledProviderScope(container: container, child: const LaapakApp()),
+  );
 }
 
 class LaapakApp extends ConsumerWidget {
@@ -22,8 +31,6 @@ class LaapakApp extends ConsumerWidget {
         title: 'Laapak',
         debugShowCheckedModeBanner: false,
         theme: LaapakTheme.lightTheme,
-        darkTheme: LaapakTheme.darkTheme,
-        themeMode: ThemeMode.light,
         home: const Scaffold(body: Center(child: CircularProgressIndicator())),
       );
     }
@@ -32,8 +39,6 @@ class LaapakApp extends ConsumerWidget {
       title: 'Laapak',
       debugShowCheckedModeBanner: false,
       theme: LaapakTheme.lightTheme,
-      darkTheme: LaapakTheme.darkTheme,
-      themeMode: ThemeMode.light,
       home: authState.isAuthenticated
           ? const OrderScreen()
           : const LoginScreen(),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../theme/theme.dart';
 import '../../utils/responsive.dart';
+import '../../models/product_model.dart';
+import '../../widgets/cached_image.dart';
 
 /// Device Care Screen
 ///
@@ -20,7 +22,8 @@ class _DeviceCareScreenState extends State<DeviceCareScreen> {
       'icon': Icons.shield_outlined,
       'title': 'خلي بالك على جهازك',
       'subtitle': 'نصايح بسيطة تحافظ بيها على اللابتوب أطول فترة ممكنة',
-      'intro': 'جهازك اتفحص قبل ما يتسلمك،\nوالنصايح دي هتساعدك تحافظ على كفاءته وجودته مع الاستخدام اليومي.',
+      'intro':
+          'جهازك اتفحص قبل ما يتسلمك،\nوالنصايح دي هتساعدك تحافظ على كفاءته وجودته مع الاستخدام اليومي.',
     },
     {
       'icon': Icons.cleaning_services_outlined,
@@ -31,15 +34,18 @@ class _DeviceCareScreenState extends State<DeviceCareScreen> {
         'دخول أتربة للمراوح ومخارج الهواء',
         'بهتان في شكل الجهاز وتقليل عمره الافتراضي',
       ],
-      'solution': 'التنظيف المنتظم بيساعد الجهاز يشتغل بكفاءة أفضل ولفترة أطول.',
+      'solution':
+          'التنظيف المنتظم بيساعد الجهاز يشتغل بكفاءة أفضل ولفترة أطول.',
       'warning': {
         'title': '❗ تنبيه مهم',
-        'subtitle': 'تجنب رش أي مواد سائلة للتنظيف على الكيبورد أو الجهاز بشكل مباشر',
+        'subtitle':
+            'تجنب رش أي مواد سائلة للتنظيف على الكيبورد أو الجهاز بشكل مباشر',
         'problems': [
           'دخول السوائل للمفاتيح أو المكونات الداخلية',
           'أعطال مفاجئة يصعب إصلاحها',
         ],
-        'solution': 'دايمًا استخدم قطعة قماش مخصّصة أو رش السائل على القماش الأول، مش على الجهاز نفسه.',
+        'solution':
+            'دايمًا استخدم قطعة قماش مخصّصة أو رش السائل على القماش الأول، مش على الجهاز نفسه.',
       },
     },
     {
@@ -57,10 +63,7 @@ class _DeviceCareScreenState extends State<DeviceCareScreen> {
       'icon': Icons.water_drop_outlined,
       'title': 'السوائل والأكل',
       'subtitle': 'إبعاد السوائل عن الجهاز قدر الإمكان',
-      'problems': [
-        'تلف مفاجئ',
-        'أعطال غير قابلة للإصلاح أحيانًا',
-      ],
+      'problems': ['تلف مفاجئ', 'أعطال غير قابلة للإصلاح أحيانًا'],
       'solution': 'خليك حريص إن الأكل والمشروبات بعيد عن الجهاز.',
     },
     {
@@ -77,48 +80,21 @@ class _DeviceCareScreenState extends State<DeviceCareScreen> {
         'يفضّل إن نسبة الشحن تكون غالبًا بين 20٪ و 80٪',
         'لو الجهاز سخن، افصله شوية وخليه يبرد قبل ما تشحنه تاني',
       ],
-      'solution': 'الأسلوب البسيط ده بيساعد يحافظ على كفاءة البطارية وعمرها لأطول فترة ممكنة.',
+      'solution':
+          'الأسلوب البسيط ده بيساعد يحافظ على كفاءة البطارية وعمرها لأطول فترة ممكنة.',
     },
     {
       'icon': Icons.luggage_outlined,
       'title': 'الحمل والتنقل',
       'subtitle': 'تجنب وضع الجهاز داخل شنطة غير مبطنة',
-      'problems': [
-        'تكسر مفصلات الشاشة',
-        'تأثر على الهارد أو البوردة',
-      ],
+      'problems': ['تكسر مفصلات الشاشة', 'تأثر على الهارد أو البوردة'],
       'solution': 'استخدم شنطة مخصصة لحماية الجهاز أثناء التنقل.',
     },
     {
       'icon': Icons.shopping_bag_outlined,
       'title': 'منتجات مفيدة',
       'subtitle': 'منتجات هتساعدك تحافظ على جهازك بشكل أفضل',
-      'products': [
-        {
-          'name': 'مواد تنظيف مخصصة للشاشات',
-          'description': 'مناديل وسوائل تنظيف آمنة على الشاشات',
-        },
-        {
-          'name': 'شنطة حماية مبطنة',
-          'description': 'شنطة مخصصة للابتوب بحماية من الصدمات',
-        },
-        {
-          'name': 'قاعدة تبريد',
-          'description': 'قاعدة تبريد لتحسين تدفق الهواء وتقليل الحرارة',
-        },
-        {
-          'name': 'غطاء حماية للكيبورد',
-          'description': 'غطاء سيليكون لحماية الكيبورد من الأتربة والسوائل',
-        },
-        {
-          'name': 'شاحن احتياطي أصلي',
-          'description': 'شاحن احتياطي أصلي متوافق مع جهازك',
-        },
-        {
-          'name': 'حقيبة حماية للشاحن',
-          'description': 'حقيبة لحماية كابل الشاحن من التلف',
-        },
-      ],
+      'isProductsStep': true,
     },
   ];
 
@@ -139,7 +115,7 @@ class _DeviceCareScreenState extends State<DeviceCareScreen> {
             onPressed: () => Navigator.of(context).pop(),
           ),
           title: Text(
-            'صيانة الجهاز',
+            'ازاي تحافظ على جهازك؟',
             style: LaapakTypography.titleLarge(color: LaapakColors.textPrimary),
           ),
         ),
@@ -219,7 +195,6 @@ class _DeviceCareScreenState extends State<DeviceCareScreen> {
     );
   }
 
-
   /// Build step content
   Widget _buildStepContent() {
     final step = _careSteps[_currentStep];
@@ -236,7 +211,7 @@ class _DeviceCareScreenState extends State<DeviceCareScreen> {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: LaapakColors.primary.withOpacity(0.1),
+                color: LaapakColors.primary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -322,54 +297,15 @@ class _DeviceCareScreenState extends State<DeviceCareScreen> {
           textAlign: TextAlign.center,
         ),
         SizedBox(height: Responsive.xl),
-        
+
         // Products list (for step 7)
-        if (step['products'] != null) ...[
-          ...((step['products'] as List<Map<String, dynamic>>).map((product) {
+        if (step['isProductsStep'] == true) ...[
+          ...MockProducts.careProducts.map((product) {
             return Padding(
               padding: EdgeInsets.only(bottom: Responsive.md),
-              child: Card(
-                child: Padding(
-                  padding: Responsive.cardPaddingInsets,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.check_circle_outline,
-                            size: 20,
-                            color: LaapakColors.primary,
-                          ),
-                          SizedBox(width: Responsive.sm),
-                          Expanded(
-                            child: Text(
-                              product['name'] as String,
-                              style: LaapakTypography.titleSmall(
-                                color: LaapakColors.textPrimary,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (product['description'] != null) ...[
-                        SizedBox(height: Responsive.xs),
-                        Padding(
-                          padding: EdgeInsets.only(right: Responsive.md + Responsive.sm),
-                          child: Text(
-                            product['description'] as String,
-                            style: LaapakTypography.bodyMedium(
-                              color: LaapakColors.textSecondary,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
+              child: _buildProductCard(product),
             );
-          })),
+          }),
           SizedBox(height: Responsive.xl),
         ] else ...[
           // Problems card
@@ -417,11 +353,11 @@ class _DeviceCareScreenState extends State<DeviceCareScreen> {
             ),
             SizedBox(height: Responsive.lg),
           ],
-          
+
           // Tips section (for step 5)
           if (step['tips'] != null) ...[
             Card(
-              color: LaapakColors.info.withOpacity(0.1),
+              color: LaapakColors.info.withValues(alpha: 0.1),
               child: Padding(
                 padding: Responsive.cardPaddingInsets,
                 child: Column(
@@ -464,11 +400,11 @@ class _DeviceCareScreenState extends State<DeviceCareScreen> {
             ),
             SizedBox(height: Responsive.lg),
           ],
-          
+
           // Solution card
           if (step['solution'] != null)
             Card(
-              color: LaapakColors.success.withOpacity(0.1),
+              color: LaapakColors.success.withValues(alpha: 0.1),
               child: Padding(
                 padding: Responsive.cardPaddingInsets,
                 child: Row(
@@ -492,12 +428,12 @@ class _DeviceCareScreenState extends State<DeviceCareScreen> {
                 ),
               ),
             ),
-          
+
           // Warning section (for step 2)
           if (step['warning'] != null) ...[
             SizedBox(height: Responsive.lg),
             Card(
-              color: LaapakColors.warning.withOpacity(0.1),
+              color: LaapakColors.warning.withValues(alpha: 0.1),
               child: Padding(
                 padding: Responsive.cardPaddingInsets,
                 child: Column(
@@ -524,7 +460,9 @@ class _DeviceCareScreenState extends State<DeviceCareScreen> {
                       ),
                     ),
                     SizedBox(height: Responsive.sm),
-                    ...((step['warning']['problems'] as List<String>).map((problem) {
+                    ...((step['warning']['problems'] as List<String>).map((
+                      problem,
+                    ) {
                       return Padding(
                         padding: EdgeInsets.only(bottom: Responsive.xs),
                         child: Row(
@@ -655,5 +593,175 @@ class _DeviceCareScreenState extends State<DeviceCareScreen> {
       ),
     );
   }
-}
 
+  /// Build product card with image, description, and cart button
+  Widget _buildProductCard(ProductModel product) {
+    return Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Product Image
+          ClipRRect(
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(Responsive.buttonRadius),
+              topRight: Radius.circular(Responsive.buttonRadius),
+            ),
+            child: CachedImage(
+              imageUrl: product.imageUrl,
+              height: 180,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(Responsive.buttonRadius),
+                topRight: Radius.circular(Responsive.buttonRadius),
+              ),
+            ),
+          ),
+
+          // Product Info
+          Padding(
+            padding: Responsive.cardPaddingInsets,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Product Name
+                Text(
+                  product.name,
+                  style: LaapakTypography.titleMedium(
+                    color: LaapakColors.textPrimary,
+                  ),
+                ),
+                SizedBox(height: Responsive.sm),
+
+                // Product Description
+                Text(
+                  product.description,
+                  style: LaapakTypography.bodyMedium(
+                    color: LaapakColors.textSecondary,
+                  ),
+                ),
+
+                // Price and Cart Button
+                if (product.price != null) ...[
+                  SizedBox(height: Responsive.md),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '${product.price!.toStringAsFixed(0)} ج.م',
+                        style: LaapakTypography.titleSmall(
+                          color: LaapakColors.primary,
+                        ),
+                      ),
+                      SizedBox(
+                        height: 36,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            // TODO: Add to cart functionality
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'تم إضافة ${product.name} للسلة',
+                                  style: LaapakTypography.bodyMedium(
+                                    color: LaapakColors.background,
+                                  ),
+                                ),
+                                backgroundColor: LaapakColors.success,
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          },
+                          icon: Icon(
+                            Icons.shopping_cart_outlined,
+                            size: 18,
+                            color: Colors.white,
+                          ),
+                          label: Text(
+                            'أضف للسلة',
+                            style: LaapakTypography.labelMedium(
+                              color: Colors.white,
+                            ),
+                          ),
+                          style:
+                              ElevatedButton.styleFrom(
+                                backgroundColor: LaapakColors.primary,
+                                elevation: 0,
+                                shadowColor: Colors.transparent,
+                                splashFactory: NoSplash.splashFactory,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: Responsive.sm,
+                                  vertical: Responsive.xs,
+                                ),
+                              ).copyWith(
+                                overlayColor: WidgetStateProperty.all(
+                                  Colors.transparent,
+                                ),
+                              ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ] else ...[
+                  SizedBox(height: Responsive.md),
+                  SizedBox(
+                    height: 36,
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        // TODO: Add to cart functionality
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'تم إضافة ${product.name} للسلة',
+                              style: LaapakTypography.bodyMedium(
+                                color: LaapakColors.background,
+                              ),
+                            ),
+                            backgroundColor: LaapakColors.success,
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                      icon: Icon(
+                        Icons.shopping_cart_outlined,
+                        size: 18,
+                        color: Colors.white,
+                      ),
+                      label: Text(
+                        'أضف للسلة',
+                        style: LaapakTypography.labelMedium(
+                          color: Colors.white,
+                        ),
+                      ),
+                      style:
+                          ElevatedButton.styleFrom(
+                            backgroundColor: LaapakColors.primary,
+                            elevation: 0,
+                            shadowColor: Colors.transparent,
+                            splashFactory: NoSplash.splashFactory,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: Responsive.sm,
+                              vertical: Responsive.xs,
+                            ),
+                          ).copyWith(
+                            overlayColor: WidgetStateProperty.all(
+                              Colors.transparent,
+                            ),
+                          ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/client_model.dart';
 import '../services/laapak_api_service.dart';
 import '../services/storage_service.dart';
+import '../services/error_handler_service.dart';
+import '../utils/constants.dart';
 
 /// Authentication State
 class AuthState {
@@ -147,25 +149,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
       
       developer.log('🎉 Authentication state updated', name: 'Auth');
-    } catch (e) {
-      String errorMessage = 'فشل تسجيل الدخول';
-      
+    } catch (e, stackTrace) {
       developer.log('❌ Login failed', name: 'Auth');
       developer.log('   Error type: ${e.runtimeType}', name: 'Auth');
       developer.log('   Error message: $e', name: 'Auth');
       
-      if (e is LaapakApiException) {
-        developer.log('   API Exception: ${e.errorCode} (${e.statusCode})', name: 'Auth');
-        developer.log('   API Message: ${e.message}', name: 'Auth');
-        errorMessage = e.message;
-      } else if (e.toString().contains('SocketException') || 
-                 e.toString().contains('Failed host lookup')) {
-        developer.log('   Network error detected', name: 'Auth');
-        errorMessage = 'مشكلة في الاتصال بالإنترنت';
-      } else {
-        developer.log('   Unknown error: $e', name: 'Auth');
-        errorMessage = e.toString();
-      }
+      // Use error handler service for user-friendly messages
+      final errorHandler = ErrorHandlerService.instance;
+      errorHandler.logError(e, stackTrace, context: 'Login');
+      
+      final errorMessage = errorHandler.getErrorMessage(
+        e,
+        defaultMessage: AppConstants.errorLoginFailed,
+      );
 
       state = state.copyWith(
         isLoading: false,

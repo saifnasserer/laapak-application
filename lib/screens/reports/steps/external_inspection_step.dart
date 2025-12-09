@@ -5,6 +5,7 @@ import 'package:chewie/chewie.dart';
 import 'package:lottie/lottie.dart';
 import '../../../theme/theme.dart';
 import '../../../utils/responsive.dart';
+import '../../../widgets/cached_image.dart';
 
 /// External Inspection Step Widget
 ///
@@ -286,61 +287,36 @@ class ExternalInspectionStep extends StatelessWidget {
                               Responsive.cardRadius,
                             ),
                           ),
-                          child: ClipRRect(
+                          child: CachedImage(
+                            imageUrl: imageUrl,
+                            height: 200,
+                            fit: BoxFit.cover,
+                            headers: {'User-Agent': 'Mozilla/5.0'},
                             borderRadius: BorderRadius.circular(
                               Responsive.cardRadius,
                             ),
-                            child: Image.network(
-                              imageUrl,
-                              fit: BoxFit.cover,
-                              headers: {'User-Agent': 'Mozilla/5.0'},
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: LaapakColors.surfaceVariant,
-                                  child: Center(
-                                    child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.image_not_supported_outlined,
-                                          color: LaapakColors.textSecondary,
-                                          size: Responsive.iconSizeLarge,
-                                        ),
-                                        SizedBox(height: Responsive.xs),
-                                        Text(
-                                          'فشل تحميل الصورة',
-                                          style: LaapakTypography.labelSmall(
-                                            color: LaapakColors.textSecondary,
-                                          ),
-                                        ),
-                                      ],
+                            errorWidget: Container(
+                              height: 200,
+                              color: LaapakColors.surfaceVariant,
+                              child: Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.image_not_supported_outlined,
+                                      color: LaapakColors.textSecondary,
+                                      size: Responsive.iconSizeLarge,
                                     ),
-                                  ),
-                                );
-                              },
-                              loadingBuilder:
-                                  (context, child, loadingProgress) {
-                                    if (loadingProgress == null) return child;
-                                    return Container(
-                                      color: LaapakColors.surfaceVariant,
-                                      child: Center(
-                                        child: CircularProgressIndicator(
-                                          value:
-                                              loadingProgress
-                                                      .expectedTotalBytes !=
-                                                  null
-                                              ? loadingProgress
-                                                        .cumulativeBytesLoaded /
-                                                    loadingProgress
-                                                        .expectedTotalBytes!
-                                              : null,
-                                          strokeWidth: 2,
-                                          color: LaapakColors.primary,
-                                        ),
+                                    SizedBox(height: Responsive.xs),
+                                    Text(
+                                      'فشل تحميل الصورة',
+                                      style: LaapakTypography.labelSmall(
+                                        color: LaapakColors.textSecondary,
                                       ),
-                                    );
-                                  },
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
                         ),

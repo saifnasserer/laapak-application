@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'package:http/http.dart' as http;
 
 /// Laapak Report System API Service
@@ -59,8 +60,81 @@ class LaapakApiService {
     this.useDevelopment = false,
   });
   
-  /// Make HTTP request to API
+  /// Make HTTP request to API with retry logic
   Future<Map<String, dynamic>> _makeRequest(
+    String endpoint,
+    String method, {
+    Map<String, dynamic>? data,
+    Map<String, String>? queryParams,
+    int maxRetries = 3,
+  }) async {
+    int attempt = 0;
+    LaapakApiException? lastException;
+
+    while (attempt < maxRetries) {
+      try {
+        return await _executeRequest(
+          endpoint,
+          method,
+          data: data,
+          queryParams: queryParams,
+        );
+      } on LaapakApiException catch (e) {
+        lastException = e;
+        
+        // Don't retry on client errors (4xx) except 408 (timeout) and 429 (rate limit)
+        if (e.statusCode >= 400 && e.statusCode < 500) {
+          if (e.statusCode != 408 && e.statusCode != 429) {
+            rethrow;
+          }
+        }
+        
+        // Don't retry on server errors (5xx) if it's the last attempt
+        if (e.statusCode >= 500 && attempt == maxRetries - 1) {
+          rethrow;
+        }
+
+        attempt++;
+        if (attempt < maxRetries) {
+          // Calculate exponential backoff delay
+          final delaySeconds = 1 << (attempt - 1); // 1, 2, 4 seconds
+          final delay = Duration(seconds: delaySeconds > 10 ? 10 : delaySeconds);
+          
+          developer.log(
+            'Request failed, retrying in ${delaySeconds}s (attempt $attempt/$maxRetries)',
+            name: 'API',
+          );
+          
+          await Future.delayed(delay);
+        }
+      } catch (e) {
+        // For non-API exceptions, retry if it's a network error
+        final errorString = e.toString().toLowerCase();
+        if (errorString.contains('socketexception') ||
+            errorString.contains('timeout') ||
+            errorString.contains('connection')) {
+          attempt++;
+          if (attempt < maxRetries) {
+            final delaySeconds = 1 << (attempt - 1);
+            final delay = Duration(seconds: delaySeconds > 10 ? 10 : delaySeconds);
+            await Future.delayed(delay);
+            continue;
+          }
+        }
+        rethrow;
+      }
+    }
+
+    // If we get here, all retries failed
+    throw lastException ?? LaapakApiException(
+      message: 'Request failed after $maxRetries attempts',
+      errorCode: 'MAX_RETRIES_EXCEEDED',
+      statusCode: 0,
+    );
+  }
+
+  /// Execute a single HTTP request
+  Future<Map<String, dynamic>> _executeRequest(
     String endpoint,
     String method, {
     Map<String, dynamic>? data,
@@ -80,7 +154,16 @@ class LaapakApiService {
       request.body = jsonEncode(data);
     }
     
-    final streamedResponse = await request.send();
+    final streamedResponse = await request.send().timeout(
+      const Duration(seconds: 30),
+      onTimeout: () {
+        throw LaapakApiException(
+          message: 'Request timeout',
+          errorCode: 'TIMEOUT',
+          statusCode: 408,
+        );
+      },
+    );
     final response = await http.Response.fromStream(streamedResponse);
     
     if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -104,9 +187,18 @@ class LaapakApiService {
         }
       } catch (e) {
         // Log the actual response for debugging
-        print('API Response Error - Status: ${response.statusCode}');
-        print('Response body: ${response.body}');
-        print('Response headers: ${response.headers}');
+        developer.log(
+          'API Response Error - Status: ${response.statusCode}',
+          name: 'API',
+        );
+        developer.log(
+          'Response body: ${response.body}',
+          name: 'API',
+        );
+        developer.log(
+          'Response headers: ${response.headers}',
+          name: 'API',
+        );
         throw LaapakApiException(
           message: 'Invalid response format: ${e.toString()}',
           errorCode: 'INVALID_RESPONSE',

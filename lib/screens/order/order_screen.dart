@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'dart:io';
 import '../../theme/theme.dart';
 import '../../utils/responsive.dart';
+import '../../utils/constants.dart';
 import '../../widgets/dismiss_keyboard.dart';
 import '../../widgets/device_specs_card.dart';
 import '../../providers/reports_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/notification_provider.dart';
+import '../../services/share_service.dart';
 import '../reports/reports_screen.dart';
 import '../reports/reports_list_screen.dart';
 import '../warranty/warranty_screen.dart';
@@ -25,6 +29,42 @@ class OrderScreen extends ConsumerStatefulWidget {
 }
 
 class _OrderScreenState extends ConsumerState<OrderScreen> {
+  bool _hasRequestedPermissions = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Request notification permissions when screen first loads (only for root screen)
+    // Delay to ensure the widget tree is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _requestNotificationPermissionsIfNeeded();
+    });
+  }
+
+  /// Request notification permissions if needed (Android 13+)
+  Future<void> _requestNotificationPermissionsIfNeeded() async {
+    // Only request once and only on Android
+    if (_hasRequestedPermissions || !Platform.isAndroid) {
+      return;
+    }
+
+    _hasRequestedPermissions = true;
+
+    try {
+      final notificationService = ref.read(notificationServiceProvider);
+
+      // Check if permissions are already granted
+      final enabled = await notificationService.areNotificationsEnabled();
+
+      if (enabled != true) {
+        // Request permissions
+        await notificationService.requestPermissions();
+      }
+    } catch (e) {
+      // Silently fail - permissions will be requested when user tries to show notification
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final reportsAsync = ref.watch(clientReportsProvider);
@@ -125,6 +165,7 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
                               firstReport['created_at']?.toString() ??
                               DateTime.now().toIso8601String(),
                           deviceStatus: 'جيد',
+                          additionalSpecs: _buildAdditionalSpecs(firstReport),
                         )
                       else
                         reportsAsync.when(
@@ -143,7 +184,7 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
                             child: Padding(
                               padding: Responsive.cardPaddingInsets,
                               child: Text(
-                                'خطأ في تحميل بيانات الجهاز',
+                                AppConstants.errorDeviceInfoLoadFailed,
                                 style: LaapakTypography.bodyMedium(
                                   color: LaapakColors.error,
                                 ),
@@ -263,6 +304,26 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
               ? () => _openInvoicePrint(context, firstReport)
               : null,
         ),
+
+        SizedBox(height: Responsive.md),
+
+        // Share Report Button
+        _buildNavButton(
+          icon: Icons.share_outlined,
+          text: 'مشاركة التقرير',
+          onPressed: firstReport != null
+              ? () => _shareReport(context, firstReport)
+              : null,
+        ),
+
+        SizedBox(height: Responsive.md),
+
+        // Test Notification Button
+        _buildNavButton(
+          icon: Icons.notifications_outlined,
+          text: 'إشعار تجريبي',
+          onPressed: () => _showTestNotification(context),
+        ),
       ],
     );
   }
@@ -318,7 +379,7 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'لا توجد فاتورة متاحة لهذا التقرير',
+            AppConstants.errorInvoiceNotAvailable,
             style: LaapakTypography.bodyMedium(color: LaapakColors.background),
           ),
           backgroundColor: LaapakColors.error,
@@ -334,7 +395,7 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'خطأ في المصادقة',
+              AppConstants.errorUnauthorized,
               style: LaapakTypography.bodyMedium(
                 color: LaapakColors.background,
               ),
@@ -367,16 +428,121 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
         }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'حدث خطأ أثناء فتح الفاتورة: ${e.toString()}',
-            style: LaapakTypography.bodyMedium(color: LaapakColors.background),
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'حدث خطأ أثناء فتح الفاتورة: ${e.toString()}',
+              style: LaapakTypography.bodyMedium(
+                color: LaapakColors.background,
+              ),
+            ),
+            backgroundColor: LaapakColors.error,
           ),
-          backgroundColor: LaapakColors.error,
-        ),
-      );
+        );
+      }
     }
+  }
+
+  /// Show test notification
+  Future<void> _showTestNotification(BuildContext context) async {
+    try {
+      final notificationService = ref.read(notificationServiceProvider);
+      await notificationService.showTestNotification();
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppConstants.successNotificationSent,
+              style: LaapakTypography.bodyMedium(
+                color: LaapakColors.background,
+              ),
+            ),
+            backgroundColor: LaapakColors.primary,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'حدث خطأ أثناء إرسال الإشعار: ${e.toString()}',
+              style: LaapakTypography.bodyMedium(
+                color: LaapakColors.background,
+              ),
+            ),
+            backgroundColor: LaapakColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Share report
+  Future<void> _shareReport(
+    BuildContext context,
+    Map<String, dynamic> report,
+  ) async {
+    try {
+      final shareService = ShareService.instance;
+      await shareService.shareReport(
+        reportId: report['id']?.toString() ?? '',
+        deviceModel: report['device_model']?.toString() ?? 'غير محدد',
+        serialNumber: report['serial_number']?.toString(),
+        inspectionDate:
+            report['inspection_date']?.toString() ??
+            report['created_at']?.toString(),
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'حدث خطأ أثناء مشاركة التقرير',
+              style: LaapakTypography.bodyMedium(
+                color: LaapakColors.background,
+              ),
+            ),
+            backgroundColor: LaapakColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Build additional specs map from report data
+  /// Only includes fields that are present and not null/empty
+  Map<String, String>? _buildAdditionalSpecs(Map<String, dynamic> report) {
+    final Map<String, String> specs = {};
+
+    // Add CPU if available
+    final cpu = report['cpu']?.toString();
+    if (cpu != null && cpu.isNotEmpty && cpu != 'null') {
+      specs['المعالج'] = cpu;
+    }
+
+    // Add GPU if available
+    final gpu = report['gpu']?.toString();
+    if (gpu != null && gpu.isNotEmpty && gpu != 'null') {
+      specs['معالج الرسوميات'] = gpu;
+    }
+
+    // Add RAM if available
+    final ram = report['ram']?.toString();
+    if (ram != null && ram.isNotEmpty && ram != 'null') {
+      specs['الذاكرة'] = ram;
+    }
+
+    // Add Storage if available
+    final storage = report['storage']?.toString();
+    if (storage != null && storage.isNotEmpty && storage != 'null') {
+      specs['التخزين'] = storage;
+    }
+
+    return specs.isNotEmpty ? specs : null;
   }
 
   /// Build logout button

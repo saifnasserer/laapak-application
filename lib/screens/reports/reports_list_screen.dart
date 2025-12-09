@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../theme/theme.dart';
 import '../../utils/responsive.dart';
 import '../../widgets/dismiss_keyboard.dart';
+import '../../widgets/empty_state.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/reports_provider.dart';
 import '../order/order_screen.dart';
@@ -35,81 +36,51 @@ class ReportsListScreen extends ConsumerWidget {
             child: reportsAsync.when(
               data: (reports) {
                 if (reports.isEmpty) {
-                  return Center(
-                    child: Padding(
-                      padding: Responsive.screenPaddingV,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.description_outlined,
-                            size: Responsive.iconSizeXLarge,
-                            color: LaapakColors.textSecondary,
-                          ),
-                          SizedBox(height: Responsive.md),
-                          Text(
-                            'لا توجد تقارير متاحة',
-                            style: LaapakTypography.bodyMedium(
-                              color: LaapakColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
+                  return EmptyState.noReports();
                 }
 
-                return SingleChildScrollView(
-                  physics: const ClampingScrollPhysics(),
-                  padding: Responsive.screenPadding,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Reports List
-                      ...reports.asMap().entries.map((entry) {
-                        final index = entry.key;
-                        final report = entry.value;
-                        return _buildReportCard(context, report, index);
-                      }),
-
-                      SizedBox(height: Responsive.xl),
-
-                      // Logout Button
-                      _buildLogoutButton(context, ref),
-                    ],
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    // Invalidate the provider to force refresh
+                    ref.invalidate(clientReportsProvider);
+                    // Wait for the refresh to complete
+                    await ref.read(clientReportsProvider.future);
+                  },
+                  color: LaapakColors.primary,
+                  child: ListView.builder(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: Responsive.screenPadding,
+                    itemCount: reports.length + 1, // +1 for logout button
+                    itemBuilder: (context, index) {
+                      if (index < reports.length) {
+                        return _buildReportCard(context, reports[index], index);
+                      } else {
+                        // Logout button as last item
+                        return Column(
+                          children: [
+                            SizedBox(height: Responsive.xl),
+                            _buildLogoutButton(context, ref),
+                          ],
+                        );
+                      }
+                    },
                   ),
                 );
               },
               loading: () => Center(
                 child: CircularProgressIndicator(color: LaapakColors.primary),
               ),
-              error: (error, stackTrace) => Center(
-                child: Padding(
-                  padding: Responsive.screenPaddingV,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.error_outline,
-                        size: Responsive.iconSizeXLarge,
-                        color: LaapakColors.error,
-                      ),
-                      SizedBox(height: Responsive.md),
-                      Text(
-                        'حدث خطأ في تحميل التقارير',
-                        style: LaapakTypography.bodyMedium(
-                          color: LaapakColors.error,
-                        ),
-                      ),
-                      SizedBox(height: Responsive.sm),
-                      Text(
-                        error.toString(),
-                        style: LaapakTypography.bodySmall(
-                          color: LaapakColors.textSecondary,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
+              error: (error, stackTrace) => EmptyState.error(
+                message: 'حدث خطأ في تحميل التقارير',
+                action: ElevatedButton.icon(
+                  onPressed: () {
+                    ref.invalidate(clientReportsProvider);
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('إعادة المحاولة'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: LaapakColors.primary,
+                    foregroundColor: Colors.white,
                   ),
                 ),
               ),
@@ -215,7 +186,7 @@ class ReportsListScreen extends ConsumerWidget {
                       vertical: Responsive.xs,
                     ),
                     decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
+                      color: statusColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(

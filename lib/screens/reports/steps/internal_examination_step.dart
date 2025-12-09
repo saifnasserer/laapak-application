@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../../theme/theme.dart';
 import '../../../utils/responsive.dart';
+import '../../../widgets/cached_image.dart';
 
 /// Internal Examination Step Widget
 ///
@@ -92,7 +93,7 @@ class InternalExaminationStep extends StatelessWidget {
                           vertical: Responsive.sm,
                         ),
                         decoration: BoxDecoration(
-                          color: LaapakColors.primary.withOpacity(0.1),
+                          color: LaapakColors.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.only(
                             topLeft: Radius.circular(Responsive.cardRadius),
                             topRight: Radius.circular(Responsive.cardRadius),
@@ -157,51 +158,30 @@ class InternalExaminationStep extends StatelessWidget {
                           child: Stack(
                             fit: StackFit.expand,
                             children: [
-                              Image.network(
-                                imageUrl,
+                              CachedImage(
+                                imageUrl: imageUrl,
                                 fit: BoxFit.contain,
                                 headers: {'User-Agent': 'Mozilla/5.0'},
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Center(
-                                    child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.image_not_supported_outlined,
+                                errorWidget: Center(
+                                  child: Column(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.image_not_supported_outlined,
+                                        color: LaapakColors.textSecondary,
+                                        size: Responsive.iconSizeLarge,
+                                      ),
+                                      SizedBox(height: Responsive.xs),
+                                      Text(
+                                        'فشل تحميل الصورة',
+                                        style: LaapakTypography.labelSmall(
                                           color: LaapakColors.textSecondary,
-                                          size: Responsive.iconSizeLarge,
                                         ),
-                                        SizedBox(height: Responsive.xs),
-                                        Text(
-                                          'فشل تحميل الصورة',
-                                          style: LaapakTypography.labelSmall(
-                                            color: LaapakColors.textSecondary,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
-                                loadingBuilder:
-                                    (context, child, loadingProgress) {
-                                      if (loadingProgress == null) return child;
-                                      return Center(
-                                        child: CircularProgressIndicator(
-                                          value:
-                                              loadingProgress
-                                                      .expectedTotalBytes !=
-                                                  null
-                                              ? loadingProgress
-                                                        .cumulativeBytesLoaded /
-                                                    loadingProgress
-                                                        .expectedTotalBytes!
-                                              : null,
-                                          strokeWidth: 2,
-                                          color: LaapakColors.primary,
-                                        ),
-                                      );
-                                    },
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                               // Tap to expand hint
                               Positioned(
@@ -213,7 +193,7 @@ class InternalExaminationStep extends StatelessWidget {
                                     vertical: Responsive.xs,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.6),
+                                    color: Colors.black.withValues(alpha: 0.6),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Row(

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../theme/theme.dart';
 import '../../utils/responsive.dart';
+import '../../utils/constants.dart';
 import '../../widgets/loading_button.dart';
 import '../../widgets/dismiss_keyboard.dart';
 import '../../providers/auth_provider.dart';
@@ -24,17 +25,49 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _phoneController = TextEditingController();
   final _orderCodeController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  
+  // Track validation state for real-time feedback
+  bool _phoneValid = false;
+  bool _orderCodeValid = false;
 
   @override
   void dispose() {
+    _phoneController.removeListener(_validatePhone);
+    _orderCodeController.removeListener(_validateOrderCode);
     _phoneController.dispose();
     _orderCodeController.dispose();
     super.dispose();
   }
 
+  /// Validate phone number in real-time
+  void _validatePhone() {
+    final value = _phoneController.text;
+    if (value.isEmpty) {
+      setState(() => _phoneValid = false);
+      return;
+    }
+    final cleanedPhone = value.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+    setState(() => _phoneValid = AppConstants.phonePattern.hasMatch(cleanedPhone));
+  }
+
+  /// Validate order code in real-time
+  void _validateOrderCode() {
+    final value = _orderCodeController.text.trim();
+    if (value.isEmpty) {
+      setState(() => _orderCodeValid = false);
+      return;
+    }
+    setState(() => _orderCodeValid = AppConstants.orderCodePattern.hasMatch(value.toUpperCase()));
+  }
+
   @override
   void initState() {
     super.initState();
+    
+    // Add listeners for real-time validation
+    _phoneController.addListener(_validatePhone);
+    _orderCodeController.addListener(_validateOrderCode);
+    
     // Listen to auth state changes
     ref.listenManual(authProvider, (previous, next) {
       if (next.isAuthenticated && previous?.isAuthenticated != true) {
@@ -197,15 +230,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               Icons.phone_outlined,
               color: LaapakColors.textSecondary,
             ),
+            suffixIcon: _phoneController.text.isNotEmpty
+                ? Icon(
+                    _phoneValid ? Icons.check_circle : Icons.error,
+                    color: _phoneValid
+                        ? Colors.green
+                        : LaapakColors.error,
+                    size: Responsive.iconSizeSmall,
+                  )
+                : null,
           ),
           style: LaapakTypography.bodyMedium(color: LaapakColors.textPrimary),
           validator: (value) {
-            // UI validation only (no logic)
             if (value == null || value.isEmpty) {
-              return 'لو سمحت أدخل رقم التليفون';
+              return AppConstants.errorPhoneRequired;
             }
-            if (value.length < 10) {
-              return 'رقم التليفون مش صحيح';
+            // Remove any spaces or special characters for validation
+            final cleanedPhone = value.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+            if (!AppConstants.phonePattern.hasMatch(cleanedPhone)) {
+              return AppConstants.errorPhoneInvalid;
             }
             return null;
           },
@@ -234,12 +277,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               Icons.receipt_long_outlined,
               color: LaapakColors.textSecondary,
             ),
+            suffixIcon: _orderCodeController.text.isNotEmpty
+                ? Icon(
+                    _orderCodeValid ? Icons.check_circle : Icons.error,
+                    color: _orderCodeValid
+                        ? Colors.green
+                        : LaapakColors.error,
+                    size: Responsive.iconSizeSmall,
+                  )
+                : null,
           ),
           style: LaapakTypography.bodyMedium(color: LaapakColors.textPrimary),
           validator: (value) {
-            // UI validation only (no logic)
             if (value == null || value.isEmpty) {
-              return 'لو سمحت أدخل كود الطلب';
+              return AppConstants.errorOrderCodeRequired;
+            }
+            // Validate order code format
+            final cleanedCode = value.trim().toUpperCase();
+            if (!AppConstants.orderCodePattern.hasMatch(cleanedCode)) {
+              return AppConstants.errorOrderCodeInvalid;
             }
             return null;
           },
@@ -263,10 +319,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         if (_formKey.currentState?.validate() ?? false) {
           HapticFeedback.lightImpact();
 
+          // Clean and normalize inputs
+          final phone = _phoneController.text
+              .replaceAll(RegExp(r'[\s\-\(\)]'), '')
+              .trim();
+          final orderCode = _orderCodeController.text.trim().toUpperCase();
+
           // Call login through Riverpod
           ref.read(authProvider.notifier).login(
-                phone: _phoneController.text.trim(),
-                orderCode: _orderCodeController.text.trim(),
+                phone: phone,
+                orderCode: orderCode,
               );
         }
       },

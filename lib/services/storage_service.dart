@@ -91,11 +91,14 @@ class StorageService {
   Future<void> saveToken(String token) async {
     try {
       if (_useSecureStorage && _secureStorage != null) {
-        await _secureStorage!.write(key: _keyToken, value: token);
+        final secureStorage = _secureStorage;
+        await secureStorage.write(key: _keyToken, value: token);
       } else if (_prefs != null) {
-        await _prefs!.setString(_keyToken, token);
+        final prefs = _prefs;
+        await prefs.setString(_keyToken, token);
       } else if (_useFileStorage && _storageDir != null) {
-        final file = File(path.join(_storageDir!.path, _keyToken));
+        final storageDir = _storageDir;
+        final file = File(path.join(storageDir.path, _keyToken));
         await file.writeAsString(token);
       } else {
         developer.log('⚠️ No storage available - token not saved', name: 'Storage');
@@ -111,11 +114,14 @@ class StorageService {
   Future<String?> getToken() async {
     try {
       if (_useSecureStorage && _secureStorage != null) {
-        return await _secureStorage!.read(key: _keyToken);
+        final secureStorage = _secureStorage;
+        return await secureStorage.read(key: _keyToken);
       } else if (_prefs != null) {
-        return _prefs!.getString(_keyToken);
+        final prefs = _prefs;
+        return prefs.getString(_keyToken);
       } else if (_useFileStorage && _storageDir != null) {
-        final file = File(path.join(_storageDir!.path, _keyToken));
+        final storageDir = _storageDir;
+        final file = File(path.join(storageDir.path, _keyToken));
         if (await file.exists()) {
           return await file.readAsString();
         }
@@ -131,11 +137,14 @@ class StorageService {
     try {
       final json = jsonEncode(client.toJson());
       if (_useSecureStorage && _secureStorage != null) {
-        await _secureStorage!.write(key: _keyClient, value: json);
+        final secureStorage = _secureStorage;
+        await secureStorage.write(key: _keyClient, value: json);
       } else if (_prefs != null) {
-        await _prefs!.setString(_keyClient, json);
+        final prefs = _prefs;
+        await prefs.setString(_keyClient, json);
       } else if (_useFileStorage && _storageDir != null) {
-        final file = File(path.join(_storageDir!.path, _keyClient));
+        final storageDir = _storageDir;
+        final file = File(path.join(storageDir.path, _keyClient));
         await file.writeAsString(json);
       } else {
         developer.log('⚠️ No storage available - client data not saved', name: 'Storage');
@@ -152,11 +161,14 @@ class StorageService {
     try {
       String? json;
       if (_useSecureStorage && _secureStorage != null) {
-        json = await _secureStorage!.read(key: _keyClient);
+        final secureStorage = _secureStorage;
+        json = await secureStorage.read(key: _keyClient);
       } else if (_prefs != null) {
-        json = _prefs!.getString(_keyClient);
+        final prefs = _prefs;
+        json = prefs.getString(_keyClient);
       } else if (_useFileStorage && _storageDir != null) {
-        final file = File(path.join(_storageDir!.path, _keyClient));
+        final storageDir = _storageDir;
+        final file = File(path.join(storageDir.path, _keyClient));
         if (await file.exists()) {
           json = await file.readAsString();
         }
@@ -175,14 +187,17 @@ class StorageService {
   Future<void> clearAll() async {
     try {
       if (_useSecureStorage && _secureStorage != null) {
-        await _secureStorage!.delete(key: _keyToken);
-        await _secureStorage!.delete(key: _keyClient);
+        final secureStorage = _secureStorage;
+        await secureStorage.delete(key: _keyToken);
+        await secureStorage.delete(key: _keyClient);
       } else if (_prefs != null) {
-        await _prefs!.remove(_keyToken);
-        await _prefs!.remove(_keyClient);
+        final prefs = _prefs;
+        await prefs.remove(_keyToken);
+        await prefs.remove(_keyClient);
       } else if (_useFileStorage && _storageDir != null) {
-        final tokenFile = File(path.join(_storageDir!.path, _keyToken));
-        final clientFile = File(path.join(_storageDir!.path, _keyClient));
+        final storageDir = _storageDir;
+        final tokenFile = File(path.join(storageDir.path, _keyToken));
+        final clientFile = File(path.join(storageDir.path, _keyClient));
         if (await tokenFile.exists()) await tokenFile.delete();
         if (await clientFile.exists()) await clientFile.delete();
       }

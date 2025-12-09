@@ -78,7 +78,7 @@ class LoadingButton extends StatelessWidget {
               // Remove splash/ripple effect (no shadow/ripple on click)
               splashFactory: NoSplash.splashFactory,
               disabledBackgroundColor: (backgroundColor ?? LaapakColors.primary)
-                  .withOpacity(0.7),
+                  .withValues(alpha: 0.7),
               disabledForegroundColor: textColor ?? Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(Responsive.buttonRadius),

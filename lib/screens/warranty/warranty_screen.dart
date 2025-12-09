@@ -510,7 +510,7 @@ class _WarrantyScreenState extends ConsumerState<WarrantyScreen> {
                 vertical: 2,
               ),
               decoration: BoxDecoration(
-                color: progressColor.withOpacity(0.1),
+                color: progressColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
@@ -618,7 +618,7 @@ class _WarrantyScreenState extends ConsumerState<WarrantyScreen> {
                 vertical: Responsive.xs,
               ),
               decoration: BoxDecoration(
-                color: progressColor.withOpacity(0.1),
+                color: progressColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(

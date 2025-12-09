@@ -105,7 +105,7 @@ class OrderConfirmationStep extends StatelessWidget {
                         vertical: Responsive.xs,
                       ),
                       decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.1),
+                        color: statusColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(

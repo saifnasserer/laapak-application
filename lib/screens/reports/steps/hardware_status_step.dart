@@ -104,7 +104,7 @@ class HardwareStatusStep extends StatelessWidget {
         // Success Message - Always visible
         Card(
           margin: EdgeInsets.only(top: Responsive.md),
-          color: LaapakColors.success.withOpacity(0.1),
+          color: LaapakColors.success.withValues(alpha: 0.1),
           child: Padding(
             padding: Responsive.cardPaddingInsets,
             child: Row(
@@ -240,7 +240,7 @@ class HardwareStatusStep extends StatelessWidget {
             vertical: Responsive.xs,
           ),
           decoration: BoxDecoration(
-            color: statusColor.withOpacity(0.1),
+            color: statusColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(6),
           ),
           child: Text(
