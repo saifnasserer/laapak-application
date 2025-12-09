@@ -319,11 +319,11 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
         SizedBox(height: Responsive.md),
 
         // Test Notification Button
-        _buildNavButton(
-          icon: Icons.notifications_outlined,
-          text: 'إشعار تجريبي',
-          onPressed: () => _showTestNotification(context),
-        ),
+        // _buildNavButton(
+        //   icon: Icons.notifications_outlined,
+        //   text: 'إشعار تجريبي',
+        //   onPressed: () => _showTestNotification(context),
+        // ),
       ],
     );
   }

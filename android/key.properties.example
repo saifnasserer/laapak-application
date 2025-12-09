@@ -1,0 +1,16 @@
+# Android Keystore Configuration
+# Copy this file to key.properties and fill in your actual values
+# DO NOT commit key.properties to version control (it should be in .gitignore)
+
+# Path to your keystore file (relative to android/app/ or absolute path)
+storeFile=../keystore.jks
+
+# Keystore password
+storePassword=000000
+
+# Key alias
+keyAlias=laapak-key
+
+# Key password
+keyPassword=your_key_password_here
+

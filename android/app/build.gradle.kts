@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -5,8 +8,15 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Load keystore properties from file
+val keystorePropertiesFile = rootProject.file("key.properties")
+val keystoreProperties = Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
 android {
-    namespace = "com.example.laapak"
+    namespace = "com.laapak.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -22,21 +32,83 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.laapak"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        applicationId = "com.laapak.app"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        
+        // Add multiDex support if needed
+        multiDexEnabled = true
+    }
+
+    buildFeatures {
+        buildConfig = true
+    }
+
+    signingConfigs {
+        // Create a signing config for release builds
+        // IMPORTANT: For production, create a keystore file and configure it properly
+        // See: https://docs.flutter.dev/deployment/android#signing-the-app
+        create("release") {
+            // Load from key.properties file if it exists, otherwise fall back to environment variables or debug
+            val keystoreFile = keystoreProperties["storeFile"] as String? 
+                ?: System.getenv("KEYSTORE_FILE") 
+                ?: "../keystore.jks"
+            
+            val keystorePassword = keystoreProperties["storePassword"] as String?
+                ?: System.getenv("KEYSTORE_PASSWORD")
+                ?: ""
+            
+            val keyAliasValue = keystoreProperties["keyAlias"] as String?
+                ?: System.getenv("KEY_ALIAS")
+                ?: ""
+            
+            val keyPasswordValue = keystoreProperties["keyPassword"] as String?
+                ?: System.getenv("KEY_PASSWORD")
+                ?: ""
+            
+            // Only set if keystore file exists and credentials are provided
+            if (file(keystoreFile).exists() && keystorePassword.isNotEmpty() && keyAliasValue.isNotEmpty()) {
+                storeFile = file(keystoreFile)
+                storePassword = keystorePassword
+                keyAlias = keyAliasValue
+                keyPassword = keyPasswordValue
+            } else {
+                // Fallback to debug signing for development
+                // WARNING: This should be replaced with a proper keystore for production
+                storeFile = signingConfigs.getByName("debug").storeFile
+                storePassword = signingConfigs.getByName("debug").storePassword
+                keyAlias = signingConfigs.getByName("debug").keyAlias
+                keyPassword = signingConfigs.getByName("debug").keyPassword
+            }
+        }
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Enable code shrinking, obfuscation, and optimization
+            isMinifyEnabled = true
+            isShrinkResources = true
+            
+            // Use ProGuard rules
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+            
+            // Use release signing config
+            signingConfig = signingConfigs.getByName("release")
+            
+            // Remove logging in release builds
+            buildConfigField("Boolean", "ENABLE_LOGGING", "false")
+        }
+        
+        debug {
+            // Keep logging enabled in debug builds
+            isMinifyEnabled = false
+            isShrinkResources = false
+            buildConfigField("Boolean", "ENABLE_LOGGING", "true")
         }
     }
 }

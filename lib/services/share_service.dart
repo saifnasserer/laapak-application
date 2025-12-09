@@ -27,6 +27,9 @@ class ShareService {
     String? serialNumber,
     String? inspectionDate,
   }) async {
+    // Build the report URL in the format: https://reports.laapak.com/report.html?id=REPORT_ID
+    final reportUrl = 'https://reports.laapak.com/report.html?id=$reportId';
+
     final buffer = StringBuffer();
     buffer.writeln('تقرير من ${AppConstants.appName}');
     buffer.writeln('');
@@ -39,7 +42,7 @@ class ShareService {
     }
     buffer.writeln('');
     buffer.writeln('لمشاهدة التقرير الكامل:');
-    buffer.writeln('${AppConstants.appWebsite}/reports/$reportId');
+    buffer.writeln(reportUrl);
 
     await shareText(
       buffer.toString(),

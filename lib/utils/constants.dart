@@ -17,6 +17,17 @@ class AppConstants {
   /// Development base URL
   static const String devBaseUrl = 'http://localhost:3000/api';
 
+  /// WooCommerce/WordPress base URL
+  static const String wooCommerceBaseUrl = 'https://laapak.com';
+
+  // ==================== WooCommerce API Credentials ====================
+  // TODO: Move these to secure storage or environment variables for production
+  // For now, these are kept here but should be moved to a secure configuration
+  static const String wooCommerceConsumerKey =
+      'ck_a00837182f934a0f93d63877b3e33e127cefc11b';
+  static const String wooCommerceConsumerSecret =
+      'cs_2186f8d150aa716f9c6b3d1c66e9c96f5e6b209d';
+
   // ==================== API Endpoints ====================
 
   /// Health check endpoint

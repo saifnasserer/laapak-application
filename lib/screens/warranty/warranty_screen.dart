@@ -4,8 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../theme/theme.dart';
 import '../../utils/responsive.dart';
 import '../../widgets/dismiss_keyboard.dart';
+import '../../widgets/notification_permission_dialog.dart';
 import '../../providers/reports_provider.dart';
+import '../../providers/notification_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../services/laapak_api_service.dart';
+import '../../services/notification_service.dart';
 
 /// Warranty Tracker Screen
 ///
@@ -26,6 +30,51 @@ class _WarrantyScreenState extends ConsumerState<WarrantyScreen> {
     super.initState();
     // Update every second to show countdown
     _startCountdownTimer();
+    // Schedule warranty notifications when screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scheduleWarrantyNotifications();
+    });
+  }
+
+  /// Schedule warranty notifications for the current report
+  Future<void> _scheduleWarrantyNotifications() async {
+    try {
+      Map<String, dynamic>? reportData;
+
+      if (widget.reportId != null) {
+        final reportAsync = ref.read(reportsProvider(widget.reportId!));
+        reportData = reportAsync.value;
+      } else {
+        final reportsAsync = ref.read(clientReportsProvider);
+        final reports = reportsAsync.value;
+        if (reports != null && reports.isNotEmpty) {
+          reportData = reports.first;
+        }
+      }
+
+      if (reportData != null) {
+        final inspectionDate = DateTime.parse(
+          reportData['inspection_date'] ?? reportData['created_at'],
+        );
+        final reportId =
+            reportData['id']?.toString() ??
+            reportData['_id']?.toString() ??
+            widget.reportId ??
+            'unknown';
+
+        final notificationService = NotificationService();
+        await notificationService.scheduledNotifications
+            .scheduleWarrantyNotifications(
+              reportId: reportId,
+              inspectionDate: inspectionDate,
+            );
+      }
+    } catch (e) {
+      developer.log(
+        '⚠️ Error scheduling warranty notifications: $e',
+        name: 'Warranty',
+      );
+    }
   }
 
   void _startCountdownTimer() {
@@ -44,39 +93,77 @@ class _WarrantyScreenState extends ConsumerState<WarrantyScreen> {
     if (widget.reportId != null) {
       final reportAsync = ref.watch(reportsProvider(widget.reportId!));
 
-      return Scaffold(
-        backgroundColor: LaapakColors.background,
-        appBar: AppBar(
-          title: Text(
-            'الضمان',
-            style: LaapakTypography.titleLarge(color: LaapakColors.textPrimary),
-          ),
-          centerTitle: true,
-          elevation: 0,
-        ),
-        body: SafeArea(
-          child: DismissKeyboard(
-            child: Directionality(
-              textDirection: TextDirection.rtl, // RTL for Arabic
-              child: reportAsync.when(
-                data: (data) {
-                  if (data == null) {
-                    return _buildErrorState('التقرير غير موجود');
-                  }
-                  return _buildWarrantyContent(data);
-                },
-                loading: () => _buildLoadingState(),
-                error: (error, stackTrace) {
-                  developer.log(
-                    '❌ Error loading report: $error',
-                    name: 'Warranty',
-                  );
-                  return _buildErrorState(
-                    error is LaapakApiException
-                        ? error.message
-                        : 'حدث خطأ في تحميل البيانات',
-                  );
-                },
+      return Directionality(
+        textDirection: TextDirection.rtl, // RTL for Arabic
+        child: Scaffold(
+          backgroundColor: LaapakColors.background,
+          body: SafeArea(
+            top: true,
+            bottom: false,
+            child: DismissKeyboard(
+              child: CustomScrollView(
+                slivers: [
+                  // Sliver AppBar (scrollable header)
+                  SliverAppBar(
+                    backgroundColor: LaapakColors.background,
+                    elevation: 0,
+                    pinned: false, // Allow it to scroll away completely
+                    floating: true, // Snap back when scrolling up
+                    centerTitle: true,
+                    leading: IconButton(
+                      icon: Icon(
+                        Icons.arrow_back_ios_outlined,
+                        color: LaapakColors.textPrimary,
+                      ),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                    title: Text(
+                      'الضمان',
+                      style: LaapakTypography.titleLarge(
+                        color: LaapakColors.textPrimary,
+                      ),
+                    ),
+                  ),
+
+                  // Content
+                  reportAsync.when(
+                    data: (data) {
+                      if (data == null) {
+                        return SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: _buildErrorState('التقرير غير موجود'),
+                        );
+                      }
+                      return SliverPadding(
+                        padding: Responsive.screenPadding,
+                        sliver: SliverToBoxAdapter(
+                          child: _buildWarrantyContent(data),
+                        ),
+                      );
+                    },
+                    loading: () => SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: _buildLoadingState(),
+                    ),
+                    error: (error, stackTrace) {
+                      developer.log(
+                        '❌ Error loading report: $error',
+                        name: 'Warranty',
+                      );
+                      return SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: _buildErrorState(
+                          error is LaapakApiException
+                              ? error.message
+                              : 'حدث خطأ في تحميل البيانات',
+                        ),
+                      );
+                    },
+                  ),
+
+                  // Bottom padding
+                  const SliverToBoxAdapter(child: SizedBox(height: 20)),
+                ],
               ),
             ),
           ),
@@ -87,39 +174,77 @@ class _WarrantyScreenState extends ConsumerState<WarrantyScreen> {
     // Otherwise, watch clientReportsProvider for the latest report
     final reportsAsync = ref.watch(clientReportsProvider);
 
-    return Scaffold(
-      backgroundColor: LaapakColors.background,
-      appBar: AppBar(
-        title: Text(
-          'الضمان',
-          style: LaapakTypography.titleLarge(color: LaapakColors.textPrimary),
-        ),
-        centerTitle: true,
-        elevation: 0,
-      ),
-      body: SafeArea(
-        child: DismissKeyboard(
-          child: Directionality(
-            textDirection: TextDirection.rtl, // RTL for Arabic
-            child: reportsAsync.when(
-              data: (reports) {
-                if (reports.isEmpty) {
-                  return _buildErrorState('لا توجد تقارير متاحة');
-                }
-                return _buildWarrantyContent(reports.first);
-              },
-              loading: () => _buildLoadingState(),
-              error: (error, stackTrace) {
-                developer.log(
-                  '❌ Error loading reports: $error',
-                  name: 'Warranty',
-                );
-                return _buildErrorState(
-                  error is LaapakApiException
-                      ? error.message
-                      : 'حدث خطأ في تحميل البيانات',
-                );
-              },
+    return Directionality(
+      textDirection: TextDirection.rtl, // RTL for Arabic
+      child: Scaffold(
+        backgroundColor: LaapakColors.background,
+        body: SafeArea(
+          top: true,
+          bottom: false,
+          child: DismissKeyboard(
+            child: CustomScrollView(
+              slivers: [
+                // Sliver AppBar (scrollable header)
+                SliverAppBar(
+                  backgroundColor: LaapakColors.background,
+                  elevation: 0,
+                  pinned: false, // Allow it to scroll away completely
+                  floating: true, // Snap back when scrolling up
+                  centerTitle: true,
+                  leading: IconButton(
+                    icon: Icon(
+                      Icons.arrow_back_ios_outlined,
+                      color: LaapakColors.textPrimary,
+                    ),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                  title: Text(
+                    'الضمان',
+                    style: LaapakTypography.titleLarge(
+                      color: LaapakColors.textPrimary,
+                    ),
+                  ),
+                ),
+
+                // Content
+                reportsAsync.when(
+                  data: (reports) {
+                    if (reports.isEmpty) {
+                      return SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: _buildErrorState('لا توجد تقارير متاحة'),
+                      );
+                    }
+                    return SliverPadding(
+                      padding: Responsive.screenPadding,
+                      sliver: SliverToBoxAdapter(
+                        child: _buildWarrantyContent(reports.first),
+                      ),
+                    );
+                  },
+                  loading: () => SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: _buildLoadingState(),
+                  ),
+                  error: (error, stackTrace) {
+                    developer.log(
+                      '❌ Error loading reports: $error',
+                      name: 'Warranty',
+                    );
+                    return SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: _buildErrorState(
+                        error is LaapakApiException
+                            ? error.message
+                            : 'حدث خطأ في تحميل البيانات',
+                      ),
+                    );
+                  },
+                ),
+
+                // Bottom padding
+                const SliverToBoxAdapter(child: SizedBox(height: 20)),
+              ],
             ),
           ),
         ),
@@ -178,35 +303,34 @@ class _WarrantyScreenState extends ConsumerState<WarrantyScreen> {
     // Calculate warranty info
     final warrantyInfo = _calculateWarranty(reportData);
 
-    return SingleChildScrollView(
-      physics: const ClampingScrollPhysics(),
-      padding: Responsive.screenPadding,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // SizedBox(height: Responsive.lg),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Warranty Progress Bars
+        _buildWarrantyProgressBars(warrantyInfo),
 
-          // Warranty Progress Bars
-          _buildWarrantyProgressBars(warrantyInfo),
+        SizedBox(height: Responsive.lg),
 
-          SizedBox(height: Responsive.lg),
+        // Warranty Details Card
+        _buildWarrantyDetailsCard(warrantyInfo),
 
-          // Warranty Details Card
-          _buildWarrantyDetailsCard(warrantyInfo),
+        SizedBox(height: Responsive.lg),
 
-          SizedBox(height: Responsive.lg),
+        // Notification Status Card
+        _buildNotificationStatusCard(),
 
-          // Warranty Terms Card
-          _buildWarrantyTermsCard(),
+        SizedBox(height: Responsive.lg),
 
-          SizedBox(height: Responsive.lg),
+        // Warranty Terms Card
+        _buildWarrantyTermsCard(),
 
-          // Maintenance Timeline Card
-          _buildMaintenanceTimelineCard(),
+        SizedBox(height: Responsive.lg),
 
-          SizedBox(height: Responsive.xl),
-        ],
-      ),
+        // Maintenance Timeline Card
+        _buildMaintenanceTimelineCard(),
+
+        SizedBox(height: Responsive.xl),
+      ],
     );
   }
 
@@ -968,5 +1092,236 @@ class _WarrantyScreenState extends ConsumerState<WarrantyScreen> {
   /// Format date
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
+  }
+
+  /// Build notification status card with toggle
+  Widget _buildNotificationStatusCard() {
+    final permissionStatusAsync = ref.watch(
+      notificationPermissionsStatusProvider,
+    );
+    final preferenceAsync = ref.watch(notificationPreferenceProvider);
+
+    return Card(
+      child: Padding(
+        padding: Responsive.cardPaddingInsets,
+        child: permissionStatusAsync.when(
+          data: (permissionGranted) {
+            return preferenceAsync.when(
+              data: (preferenceEnabled) {
+                final hasPermission = permissionGranted == true;
+                final isEnabled = hasPermission && preferenceEnabled;
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          isEnabled
+                              ? Icons.notifications_active
+                              : Icons.notifications_off,
+                          color: isEnabled
+                              ? LaapakColors.success
+                              : LaapakColors.textSecondary,
+                          size: Responsive.iconSizeMedium,
+                        ),
+                        SizedBox(width: Responsive.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isEnabled
+                                    ? 'الإشعارات مفعلة'
+                                    : 'الإشعارات معطلة',
+                                style: LaapakTypography.titleSmall(
+                                  color: LaapakColors.textPrimary,
+                                ),
+                              ),
+                              SizedBox(height: Responsive.xs),
+                              Text(
+                                isEnabled
+                                    ? 'ستتلقى إشعاراً عند موعد الصيانة الدورية المجانية لتذكيرك باستخدام خدمة الصيانة المجانية.'
+                                    : preferenceEnabled && !hasPermission
+                                    ? 'يجب تفعيل صلاحيات الإشعارات أولاً'
+                                    : 'فعّل الإشعارات لتلقي تذكيرات بفحص الضمان ومواعيد الصيانة الدورية المجانية.',
+                                style: LaapakTypography.bodySmall(
+                                  color: LaapakColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Switch(
+                          value: preferenceEnabled,
+                          onChanged: hasPermission
+                              ? (value) async {
+                                  // Update preference
+                                  final storageServiceAsync = ref.read(
+                                    storageServiceProvider,
+                                  );
+                                  final storageService =
+                                      await storageServiceAsync.value;
+                                  if (storageService != null) {
+                                    await storageService
+                                        .setNotificationsEnabled(value);
+                                    ref.invalidate(
+                                      notificationPreferenceProvider,
+                                    );
+
+                                    final notificationService =
+                                        NotificationService();
+                                    await notificationService.initialize();
+
+                                    if (value) {
+                                      // Schedule notifications
+                                      await _scheduleWarrantyNotifications();
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'تم تفعيل الإشعارات بنجاح',
+                                            ),
+                                            backgroundColor:
+                                                LaapakColors.success,
+                                            duration: const Duration(
+                                              seconds: 2,
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    } else {
+                                      // Cancel notifications
+                                      final reportId = widget.reportId;
+                                      if (reportId != null) {
+                                        await notificationService
+                                            .scheduledNotifications
+                                            .cancelWarrantyNotifications(
+                                              reportId,
+                                            );
+                                      }
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text('تم إيقاف الإشعارات'),
+                                            backgroundColor:
+                                                LaapakColors.textSecondary,
+                                            duration: const Duration(
+                                              seconds: 2,
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  }
+                                }
+                              : null, // Disable toggle if no permission
+                          activeColor: LaapakColors.primary,
+                        ),
+                      ],
+                    ),
+                    if (!hasPermission) ...[
+                      SizedBox(height: Responsive.md),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            final notificationService = NotificationService();
+                            await notificationService.initialize();
+
+                            final result = await notificationService
+                                .requestPermissions(forceRequest: true);
+
+                            if (mounted) {
+                              await Future.delayed(
+                                const Duration(milliseconds: 500),
+                              );
+                              ref.invalidate(
+                                notificationPermissionsStatusProvider,
+                              );
+
+                              final isEnabled = await notificationService
+                                  .areNotificationsEnabled();
+
+                              if (result == true || isEnabled == true) {
+                                // Schedule notifications if preference is enabled
+                                final prefValue = preferenceAsync.value;
+                                if (prefValue != null && prefValue == true) {
+                                  await _scheduleWarrantyNotifications();
+                                }
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'تم تفعيل صلاحيات الإشعارات',
+                                      ),
+                                      backgroundColor: LaapakColors.success,
+                                      duration: const Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
+                              } else if (result == null) {
+                                if (mounted) {
+                                  await NotificationPermissionDialog.show(
+                                    context,
+                                  );
+                                }
+                              }
+                            }
+                          },
+                          icon: Icon(
+                            Icons.notifications_active,
+                            size: Responsive.iconSizeSmall,
+                          ),
+                          label: Text('تفعيل صلاحيات الإشعارات'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: LaapakColors.primary,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                );
+              },
+              loading: () => Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: Responsive.md),
+                  child: CircularProgressIndicator(
+                    color: LaapakColors.primary,
+                    strokeWidth: 2,
+                  ),
+                ),
+              ),
+              error: (error, stackTrace) {
+                return Text(
+                  'خطأ في تحميل إعدادات الإشعارات',
+                  style: LaapakTypography.bodySmall(color: LaapakColors.error),
+                );
+              },
+            );
+          },
+          loading: () => Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: Responsive.md),
+              child: CircularProgressIndicator(
+                color: LaapakColors.primary,
+                strokeWidth: 2,
+              ),
+            ),
+          ),
+          error: (error, stackTrace) {
+            return Text(
+              'خطأ في تحميل حالة الإشعارات',
+              style: LaapakTypography.bodySmall(color: LaapakColors.error),
+            );
+          },
+        ),
+      ),
+    );
   }
 }

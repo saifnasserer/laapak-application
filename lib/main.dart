@@ -5,6 +5,7 @@ import 'screens/order/order_screen.dart';
 import 'theme/theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/notification_provider.dart';
+import 'services/navigation_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,6 +40,7 @@ class LaapakApp extends ConsumerWidget {
       title: 'Laapak',
       debugShowCheckedModeBanner: false,
       theme: LaapakTheme.lightTheme,
+      navigatorKey: NavigationService.instance.navigatorKey,
       home: authState.isAuthenticated
           ? const OrderScreen()
           : const LoginScreen(),

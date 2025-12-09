@@ -1,8 +1,15 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest_all.dart' as tz;
 import 'dart:developer' as developer;
 import 'dart:io';
+import 'scheduled_notifications.dart';
+import 'navigation_service.dart';
+import '../screens/warranty/warranty_screen.dart';
+import '../screens/device_care/device_care_screen.dart';
 
 /// Notification Service
 ///
@@ -16,6 +23,7 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   bool _initialized = false;
+  bool _timezoneInitialized = false;
   String? _notificationIconPath;
 
   /// Get notification large icon from asset (Logo-mark.png)
@@ -51,6 +59,25 @@ class NotificationService {
     }
   }
 
+  /// Initialize timezone data
+  Future<void> _initializeTimezone() async {
+    if (_timezoneInitialized) {
+      return;
+    }
+
+    try {
+      tz.initializeTimeZones();
+      // The local timezone is automatically set by the system
+      _timezoneInitialized = true;
+      developer.log('✅ Timezone initialized', name: 'Notifications');
+    } catch (e) {
+      developer.log(
+        '⚠️ Error initializing timezone: $e',
+        name: 'Notifications',
+      );
+    }
+  }
+
   /// Initialize the notification service
   Future<bool> initialize() async {
     if (_initialized) {
@@ -62,6 +89,8 @@ class NotificationService {
     }
 
     try {
+      // Initialize timezone for scheduled notifications
+      await _initializeTimezone();
       // Android initialization settings
       const AndroidInitializationSettings androidSettings =
           AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -96,7 +125,7 @@ class NotificationService {
         // Request permissions on Android 13+ (don't await to avoid blocking initialization)
         if (Platform.isAndroid) {
           _requestAndroidPermissions().then((granted) {
-            if (granted) {
+            if (granted != null && granted == true) {
               developer.log(
                 '✅ Notification permissions granted on initialization',
                 name: 'Notifications',
@@ -128,7 +157,8 @@ class NotificationService {
   }
 
   /// Request Android permissions (Android 13+)
-  Future<bool> _requestAndroidPermissions() async {
+  /// Returns true if granted, false if denied, null if permanently denied (should open settings)
+  Future<bool?> _requestAndroidPermissions({bool forceRequest = false}) async {
     if (!Platform.isAndroid) {
       return true;
     }
@@ -148,34 +178,49 @@ class NotificationService {
         return false;
       }
 
-      // Check if permission is already granted
-      final bool? granted = await androidImplementation
-          .areNotificationsEnabled();
+      // Check if permission is already granted (unless forcing request)
+      if (!forceRequest) {
+        final bool? granted = await androidImplementation
+            .areNotificationsEnabled();
 
-      if (granted == true) {
-        developer.log(
-          '✅ Notification permissions already granted',
-          name: 'Notifications',
-        );
-        return true;
+        if (granted == true) {
+          developer.log(
+            '✅ Notification permissions already granted',
+            name: 'Notifications',
+          );
+          return true;
+        }
       }
 
-      // Request permission
+      // Always try to request permission - this will show the system dialog
+      developer.log(
+        '📱 Requesting notification permission (showing system dialog)...',
+        name: 'Notifications',
+      );
+
       final bool? result = await androidImplementation
           .requestNotificationsPermission();
 
-      if (result == true) {
+      // Wait a moment for the system to update permission status
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      // Check the actual permission status after requesting
+      final bool? currentStatus = await androidImplementation
+          .areNotificationsEnabled();
+
+      if (result == true || currentStatus == true) {
         developer.log(
-          '✅ Notification permissions granted',
+          '✅ Notification permissions granted via dialog',
           name: 'Notifications',
         );
         return true;
       } else {
         developer.log(
-          '❌ Notification permissions denied',
+          '⚠️ Notification permissions denied - user may need to enable in settings',
           name: 'Notifications',
         );
-        return false;
+        // Return null to indicate we should offer to open settings
+        return null;
       }
     } catch (e) {
       developer.log(
@@ -186,24 +231,28 @@ class NotificationService {
     }
   }
 
-  /// Check if notification permissions are granted (Android 13+)
+  /// Check if notification permissions are granted
   Future<bool?> areNotificationsEnabled() async {
-    if (!Platform.isAndroid) {
-      return true;
-    }
-
     try {
-      final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
-          _notificationsPlugin
-              .resolvePlatformSpecificImplementation<
-                AndroidFlutterLocalNotificationsPlugin
-              >();
+      if (Platform.isAndroid) {
+        final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
+            _notificationsPlugin
+                .resolvePlatformSpecificImplementation<
+                  AndroidFlutterLocalNotificationsPlugin
+                >();
 
-      if (androidImplementation == null) {
-        return null;
+        if (androidImplementation == null) {
+          return null;
+        }
+
+        return await androidImplementation.areNotificationsEnabled();
+      } else if (Platform.isIOS) {
+        // For iOS, we check by trying to get permission status
+        // iOS permissions are handled during initialization
+        // This is a simplified check - actual permission status requires platform channels
+        return true; // iOS typically grants during initialization
       }
-
-      return await androidImplementation.areNotificationsEnabled();
+      return true;
     } catch (e) {
       developer.log(
         '❌ Error checking notification permissions: $e',
@@ -214,12 +263,71 @@ class NotificationService {
   }
 
   /// Request notification permissions (public method)
-  Future<bool> requestPermissions() async {
+  /// Returns: true if granted, false if denied, null if permanently denied (should open settings)
+  Future<bool?> requestPermissions({bool forceRequest = false}) async {
     if (!_initialized) {
-      await initialize();
+      final initialized = await initialize();
+      if (!initialized) {
+        return false;
+      }
     }
-    return await _requestAndroidPermissions();
+
+    // On iOS, try to request permissions if not already granted
+    if (Platform.isIOS) {
+      try {
+        // iOS permissions are typically requested during initialization
+        // but we can check the status
+        final bool? enabled = await areNotificationsEnabled();
+
+        // If not enabled, try showing a test notification to trigger permission request
+        if (enabled != true) {
+          developer.log(
+            '📱 Requesting iOS notification permissions...',
+            name: 'Notifications',
+          );
+          // Show a silent test notification to trigger permission request
+          try {
+            await _notificationsPlugin.show(
+              999999,
+              '',
+              '',
+              const NotificationDetails(
+                iOS: DarwinNotificationDetails(
+                  presentAlert: false,
+                  presentBadge: false,
+                  presentSound: false,
+                ),
+              ),
+            );
+            // Cancel it immediately
+            await _notificationsPlugin.cancel(999999);
+          } catch (e) {
+            // Ignore errors - this is just to trigger permission request
+          }
+
+          // Wait a moment and check again
+          await Future.delayed(const Duration(milliseconds: 500));
+          final bool? newStatus = await areNotificationsEnabled();
+          return newStatus == true ? true : null;
+        }
+
+        return enabled == true;
+      } catch (e) {
+        developer.log(
+          '⚠️ Error requesting iOS permissions: $e',
+          name: 'Notifications',
+        );
+        return null;
+      }
+    }
+
+    // On Android, request runtime permission (will show system dialog)
+    return await _requestAndroidPermissions(forceRequest: forceRequest);
   }
+
+  // Note: Exact alarm methods removed - app now uses inexact scheduling only
+  // This avoids the need for USE_EXACT_ALARM permission which is restricted
+  // to calendar and alarm clock apps only
 
   /// Handle notification tap
   void _onNotificationTapped(NotificationResponse response) {
@@ -227,7 +335,56 @@ class NotificationService {
       '🔔 Notification tapped: ${response.id}',
       name: 'Notifications',
     );
-    // Handle notification tap logic here if needed
+
+    final payload = response.payload ?? '';
+
+    // Handle navigation based on payload
+    final navigator = NavigationService.instance.navigator;
+    if (navigator == null) {
+      developer.log(
+        '⚠️ Navigator not available for notification tap',
+        name: 'Notifications',
+      );
+      return;
+    }
+
+    // Weekly cleaning reminder - navigate to device care screen (cleaning step)
+    if (payload == 'weekly_cleaning_reminder' ||
+        payload == 'test_weekly_cleaning') {
+      scheduledNotifications.scheduleWeeklyCleaningReminder();
+
+      // Navigate to device care screen at cleaning step (step 1, index 1)
+      navigator.push(
+        MaterialPageRoute(
+          builder: (context) => const DeviceCareScreen(initialStep: 1),
+        ),
+      );
+      return;
+    }
+
+    // Warranty notifications - navigate to warranty screen
+    if (payload.startsWith('maintenance_period1') ||
+        payload.startsWith('maintenance_period2') ||
+        payload == 'test_maintenance') {
+      // Extract report ID from payload if available
+      String? reportId;
+      if (payload.contains('|')) {
+        reportId = payload.split('|').last;
+      }
+
+      // Navigate to warranty screen
+      navigator.push(
+        MaterialPageRoute(
+          builder: (context) => WarrantyScreen(reportId: reportId),
+        ),
+      );
+      return;
+    }
+
+    developer.log(
+      'ℹ️ No navigation handler for payload: $payload',
+      name: 'Notifications',
+    );
   }
 
   /// Show a simple notification
@@ -261,7 +418,7 @@ class NotificationService {
           name: 'Notifications',
         );
         final granted = await requestPermissions();
-        if (!granted) {
+        if (granted == null || granted == false) {
           developer.log(
             '❌ Cannot show notification: permissions not granted',
             name: 'Notifications',
@@ -332,6 +489,27 @@ class NotificationService {
     );
   }
 
+  /// Show a test maintenance notification
+  Future<void> showTestMaintenanceNotification() async {
+    await showNotification(
+      id: 998,
+      title: 'وقت الصيانة الدورية المجانية',
+      body:
+          'دلوقتي وقت الصيانة المجانية - الفترة الأولى. روح لـ Laapak واستفيد منها!',
+      payload: 'test_maintenance',
+    );
+  }
+
+  /// Show a test weekly cleaning notification
+  Future<void> showTestWeeklyCleaningNotification() async {
+    await showNotification(
+      id: 997,
+      title: 'تنظيف اللاب! مهم جداً 😊',
+      body: 'خد 10 دقائق وامسحه عشان تحميه من المشاكل!',
+      payload: 'test_weekly_cleaning',
+    );
+  }
+
   /// Cancel a specific notification
   Future<void> cancelNotification(int id) async {
     try {
@@ -356,5 +534,124 @@ class NotificationService {
         name: 'Notifications',
       );
     }
+  }
+
+  /// Schedule a notification at a specific date and time
+  Future<void> scheduleNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduledDate,
+    String? payload,
+  }) async {
+    if (!_initialized) {
+      developer.log(
+        '⚠️ Notifications not initialized. Initializing now...',
+        name: 'Notifications',
+      );
+      final initialized = await initialize();
+      if (!initialized) {
+        developer.log(
+          '❌ Cannot schedule notification: service not initialized',
+          name: 'Notifications',
+        );
+        return;
+      }
+    }
+
+    // Don't schedule if the date is in the past
+    if (scheduledDate.isBefore(DateTime.now())) {
+      developer.log(
+        '⚠️ Cannot schedule notification: scheduled date is in the past',
+        name: 'Notifications',
+      );
+      return;
+    }
+
+    // Check and request permissions on Android 13+
+    if (Platform.isAndroid) {
+      final bool? enabled = await areNotificationsEnabled();
+      if (enabled == false) {
+        developer.log(
+          '⚠️ Notifications disabled - requesting permission...',
+          name: 'Notifications',
+        );
+        final granted = await requestPermissions();
+        if (granted == null || granted == false) {
+          developer.log(
+            '❌ Cannot schedule notification: permissions not granted',
+            name: 'Notifications',
+          );
+          return;
+        }
+      }
+    }
+
+    try {
+      // Initialize timezone if not already done
+      await _initializeTimezone();
+
+      // Get notification icon paths
+      String? largeIconPath;
+      if (Platform.isAndroid) {
+        largeIconPath = await _getNotificationIconPath();
+      }
+
+      // Android notification details
+      final AndroidNotificationDetails androidDetails =
+          AndroidNotificationDetails(
+            'laapak_channel',
+            'Laapak Notifications',
+            channelDescription: 'Notifications for Laapak app',
+            importance: Importance.high,
+            priority: Priority.high,
+            showWhen: true,
+            icon: '@drawable/notification_icon',
+            largeIcon: largeIconPath != null
+                ? FilePathAndroidBitmap(largeIconPath)
+                : const DrawableResourceAndroidBitmap('@mipmap/launcher_icon'),
+          );
+
+      // iOS notification details
+      const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+
+      // Notification details
+      final NotificationDetails notificationDetails = NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      );
+
+      // Convert DateTime to TZDateTime
+      final scheduledTZDate = tz.TZDateTime.from(scheduledDate, tz.local);
+
+      // Schedule notification using inexact mode (no exact alarm permission required)
+      await _notificationsPlugin.zonedSchedule(
+        id,
+        title,
+        body,
+        scheduledTZDate,
+        notificationDetails,
+        androidScheduleMode: AndroidScheduleMode.inexact,
+        payload: payload,
+      );
+      developer.log(
+        '✅ Notification scheduled with inexact mode: $title at $scheduledDate (ID: $id)',
+        name: 'Notifications',
+      );
+    } catch (e) {
+      developer.log(
+        '❌ Unexpected error in scheduleNotification: $e',
+        name: 'Notifications',
+      );
+    }
+  }
+
+  /// Get an instance of ScheduledNotifications for managing scheduled notifications
+  ScheduledNotifications get scheduledNotifications {
+    return ScheduledNotifications(this);
   }
 }

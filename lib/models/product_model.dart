@@ -27,6 +27,54 @@ class ProductModel {
     );
   }
 
+  /// Convert from WooCommerce JSON response
+  factory ProductModel.fromWooCommerceJson(Map<String, dynamic> json) {
+    // Extract image URL from images array
+    String imageUrl = '';
+    if (json['images'] != null && (json['images'] as List).isNotEmpty) {
+      final firstImage = (json['images'] as List).first;
+      if (firstImage is Map<String, dynamic>) {
+        imageUrl = firstImage['src']?.toString() ?? '';
+      }
+    }
+    
+    // Extract description - Use only short_description from WooCommerce
+    String description = '';
+    if (json['short_description'] != null && json['short_description'].toString().trim().isNotEmpty) {
+      description = _stripHtmlTags(json['short_description'].toString());
+    }
+    
+    // Extract price - WooCommerce uses 'price' or 'regular_price'
+    double? price;
+    if (json['price'] != null && json['price'].toString().isNotEmpty) {
+      price = double.tryParse(json['price'].toString());
+    } else if (json['regular_price'] != null && json['regular_price'].toString().isNotEmpty) {
+      price = double.tryParse(json['regular_price'].toString());
+    }
+    
+    return ProductModel(
+      id: json['id']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      description: description,
+      imageUrl: imageUrl,
+      price: price,
+    );
+  }
+  
+  /// Strip HTML tags from description
+  static String _stripHtmlTags(String htmlString) {
+    // Simple HTML tag removal - you might want to use a package like html_unescape for better handling
+    return htmlString
+        .replaceAll(RegExp(r'<[^>]*>'), '')
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll('&amp;', '&')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&#39;', "'")
+        .trim();
+  }
+
   /// Convert to JSON
   Map<String, dynamic> toJson() {
     return {

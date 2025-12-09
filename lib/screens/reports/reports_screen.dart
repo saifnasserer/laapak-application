@@ -363,35 +363,55 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
     return Scaffold(
       backgroundColor: LaapakColors.background,
-      appBar: AppBar(
-        title: Text(
-          'التقرير',
-          style: LaapakTypography.titleLarge(color: LaapakColors.textPrimary),
-        ),
-        centerTitle: true,
-        elevation: 0,
-      ),
       body: SafeArea(
+        top: true,
+        bottom: false,
         child: DismissKeyboard(
           child: Directionality(
             textDirection: TextDirection.rtl, // RTL for Arabic
-            child: Column(
-              children: [
+            child: CustomScrollView(
+              slivers: [
+                // Sliver AppBar (scrollable header)
+                SliverAppBar(
+                  backgroundColor: LaapakColors.background,
+                  elevation: 0,
+                  pinned: false, // Allow it to scroll away completely
+                  floating: true, // Snap back when scrolling up
+                  centerTitle: true,
+                  leading: IconButton(
+                    icon: Icon(
+                      Icons.arrow_back_ios_outlined,
+                      color: LaapakColors.textPrimary,
+                    ),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                  title: Text(
+                    'التقرير',
+                    style: LaapakTypography.titleLarge(
+                      color: LaapakColors.textPrimary,
+                    ),
+                  ),
+                ),
+
                 // Step Indicator
-                _buildStepIndicator(),
+                SliverToBoxAdapter(
+                  child: _buildStepIndicator(),
+                ),
 
                 // Step Content
-                Expanded(
-                  child: reportAsync.when(
+                reportAsync.when(
                     data: (reportData) {
                       if (reportData == null) {
-                        return Center(
+                      return SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: Center(
                           child: Padding(
                             padding: Responsive.screenPaddingV,
                             child: Text(
                               'التقرير غير موجود',
                               style: LaapakTypography.bodyMedium(
                                 color: LaapakColors.textSecondary,
+                              ),
                               ),
                             ),
                           ),
@@ -408,18 +428,24 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                         _initializeFirstVideo(reportData);
                       });
 
-                      return SingleChildScrollView(
-                        physics: const ClampingScrollPhysics(),
+                    return SliverPadding(
                         padding: Responsive.screenPadding,
+                      sliver: SliverToBoxAdapter(
                         child: _buildStepContent(reportData),
+                      ),
                       );
                     },
-                    loading: () => Center(
+                  loading: () => SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
                       child: CircularProgressIndicator(
                         color: LaapakColors.primary,
                       ),
                     ),
-                    error: (error, stackTrace) => Center(
+                  ),
+                  error: (error, stackTrace) => SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
                       child: Padding(
                         padding: Responsive.screenPaddingV,
                         child: Column(
@@ -453,7 +479,14 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 ),
 
                 // Navigation Buttons
-                _buildNavigationButtons(),
+                SliverToBoxAdapter(
+                  child: _buildNavigationButtons(),
+                ),
+
+                // Bottom padding
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: 20),
+                ),
               ],
             ),
           ),

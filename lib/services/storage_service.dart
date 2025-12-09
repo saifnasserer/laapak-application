@@ -78,14 +78,16 @@ class StorageService {
       }
     }
 
-    return StorageService._(secureStorage, prefs, storageDir)
-      .._useSecureStorage = useSecureStorage
-      .._useFileStorage = useFileStorage;
+    final service = StorageService._(secureStorage, prefs, storageDir);
+    service._useSecureStorage = useSecureStorage;
+    service._useFileStorage = useFileStorage;
+    return service;
   }
 
   // Storage keys
   static const String _keyToken = 'auth_token';
   static const String _keyClient = 'client_data';
+  static const String _keyNotificationsEnabled = 'notifications_enabled';
 
   /// Save JWT token
   Future<void> saveToken(String token) async {
@@ -210,6 +212,53 @@ class StorageService {
   Future<bool> isLoggedIn() async {
     final token = await getToken();
     return token != null && token.isNotEmpty;
+  }
+
+  /// Save notification enabled preference
+  Future<void> setNotificationsEnabled(bool enabled) async {
+    try {
+      if (_useSecureStorage && _secureStorage != null) {
+        final secureStorage = _secureStorage;
+        await secureStorage.write(
+          key: _keyNotificationsEnabled,
+          value: enabled.toString(),
+        );
+      } else if (_prefs != null) {
+        final prefs = _prefs;
+        await prefs.setBool(_keyNotificationsEnabled, enabled);
+      } else if (_useFileStorage && _storageDir != null) {
+        final storageDir = _storageDir;
+        final file = File(path.join(storageDir.path, _keyNotificationsEnabled));
+        await file.writeAsString(enabled.toString());
+      }
+      developer.log('✅ Notification preference saved: $enabled', name: 'Storage');
+    } catch (e) {
+      developer.log('⚠️ Failed to save notification preference: $e', name: 'Storage');
+    }
+  }
+
+  /// Get notification enabled preference (defaults to true if not set)
+  Future<bool> getNotificationsEnabled() async {
+    try {
+      if (_useSecureStorage && _secureStorage != null) {
+        final secureStorage = _secureStorage;
+        final value = await secureStorage.read(key: _keyNotificationsEnabled);
+        return value == 'true';
+      } else if (_prefs != null) {
+        final prefs = _prefs;
+        return prefs.getBool(_keyNotificationsEnabled) ?? true; // Default to enabled
+      } else if (_useFileStorage && _storageDir != null) {
+        final storageDir = _storageDir;
+        final file = File(path.join(storageDir.path, _keyNotificationsEnabled));
+        if (await file.exists()) {
+          final value = await file.readAsString();
+          return value == 'true';
+        }
+      }
+      return true; // Default to enabled
+    } catch (e) {
+      return true; // Default to enabled on error
+    }
   }
 }
 
