@@ -81,130 +81,124 @@ class InternalExaminationStep extends StatelessWidget {
               final description = _getTestDescription(screenshot);
 
               return Card(
-                margin: EdgeInsets.only(bottom: Responsive.lg),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Header with Component Name
-                    if (component.isNotEmpty)
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: Responsive.md,
-                          vertical: Responsive.sm,
-                        ),
-                        decoration: BoxDecoration(
-                          color: LaapakColors.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.only(
-                            topLeft: Radius.circular(Responsive.cardRadius),
-                            topRight: Radius.circular(Responsive.cardRadius),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              _getComponentIcon(component),
-                              color: LaapakColors.primary,
-                              size: Responsive.iconSizeMedium,
-                            ),
-                            SizedBox(width: Responsive.sm),
-                            Expanded(
-                              child: Text(
-                                _getComponentLabel(component),
-                                style: LaapakTypography.titleMedium(
-                                  color: LaapakColors.primary,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                clipBehavior: Clip.antiAlias,
+                elevation: 0, // Removed cluttering shadow
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(Responsive.cardRadius),
+                  side: BorderSide(
+                    color: LaapakColors.border.withValues(alpha: 0.5),
+                  ),
+                ),
+                margin: EdgeInsets.only(
+                  bottom: Responsive.md,
+                ), // Reduced margin
+                child: Theme(
+                  data: Theme.of(
+                    context,
+                  ).copyWith(dividerColor: Colors.transparent),
+                  child: ExpansionTile(
+                    tilePadding: EdgeInsets.symmetric(
+                      horizontal: Responsive.md,
+                      vertical: 8,
+                    ),
+                    leading: Container(
+                      padding: EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: LaapakColors.primary.withOpacity(0.1),
+                        shape: BoxShape.circle,
                       ),
-
-                    // Screenshot Image - Expandable
-                    GestureDetector(
-                      onTap: () {
-                        // Show full screen image
-                        final imageUrls = testScreenshots
-                            .map((img) => img['url']?.toString() ?? '')
-                            .where((url) => url.isNotEmpty)
-                            .toList();
-                        onImageTap(imageUrls, index);
-                      },
-                      child: Container(
-                        height: 300,
-                        decoration: BoxDecoration(
-                          color: LaapakColors.surfaceVariant,
-                          borderRadius: component.isNotEmpty
-                              ? null
-                              : BorderRadius.only(
-                                  topLeft: Radius.circular(
-                                    Responsive.cardRadius,
-                                  ),
-                                  topRight: Radius.circular(
-                                    Responsive.cardRadius,
-                                  ),
-                                ),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: component.isNotEmpty
-                              ? BorderRadius.zero
-                              : BorderRadius.only(
-                                  topLeft: Radius.circular(
-                                    Responsive.cardRadius,
-                                  ),
-                                  topRight: Radius.circular(
-                                    Responsive.cardRadius,
-                                  ),
-                                ),
+                      child: Icon(
+                        _getComponentIcon(component),
+                        color: LaapakColors.primary,
+                        size: 20,
+                      ),
+                    ),
+                    title: Text(
+                      _getComponentLabel(component),
+                      style: LaapakTypography.titleMedium(
+                        color: LaapakColors.textPrimary,
+                      ).copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          // Show full screen image
+                          final imageUrls = testScreenshots
+                              .map((img) => img['url']?.toString() ?? '')
+                              .where((url) => url.isNotEmpty)
+                              .toList();
+                          onImageTap(imageUrls, index);
+                        },
+                        child: Container(
+                          height: 200, // Slightly reduced height
+                          color: LaapakColors.surfaceVariant.withOpacity(0.5),
                           child: Stack(
                             fit: StackFit.expand,
                             children: [
-                              CachedImage(
-                                imageUrl: imageUrl,
-                                fit: BoxFit.contain,
-                                headers: {'User-Agent': 'Mozilla/5.0'},
-                                errorWidget: Center(
-                                  child: Column(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.image_not_supported_outlined,
-                                        color: LaapakColors.textSecondary,
-                                        size: Responsive.iconSizeLarge,
-                                      ),
-                                      SizedBox(height: Responsive.xs),
-                                      Text(
-                                        'فشل تحميل الصورة',
-                                        style: LaapakTypography.labelSmall(
-                                          color: LaapakColors.textSecondary,
+                              if (imageUrl.isNotEmpty)
+                                CachedImage(
+                                  imageUrl: imageUrl,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  fit: BoxFit
+                                      .contain, // Changed to contain to show full screenshot
+                                  placeholder: Center(
+                                    child: CircularProgressIndicator(
+                                      color: LaapakColors.primary,
+                                    ),
+                                  ),
+                                  errorWidget: Center(
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.broken_image_rounded,
+                                          color: LaapakColors.textDisabled,
+                                          size: 48,
                                         ),
-                                      ),
-                                    ],
+                                        SizedBox(height: 8),
+                                        Text(
+                                          'تعذر تحميل الصورة',
+                                          style: LaapakTypography.labelMedium(
+                                            color: LaapakColors.textSecondary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                )
+                              else
+                                Center(
+                                  child: Icon(
+                                    Icons.image_not_supported_outlined,
+                                    color: LaapakColors.textDisabled,
+                                    size: 48,
                                   ),
                                 ),
-                              ),
-                              // Tap to expand hint
+
+                              // Expand hint overlay
                               Positioned(
-                                bottom: Responsive.sm,
-                                left: Responsive.sm,
+                                bottom: 12,
+                                right: 12,
                                 child: Container(
                                   padding: EdgeInsets.symmetric(
-                                    horizontal: Responsive.sm,
-                                    vertical: Responsive.xs,
+                                    horizontal: 12,
+                                    vertical: 6,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: Colors.black.withValues(alpha: 0.6),
-                                    borderRadius: BorderRadius.circular(6),
+                                    color: Colors.black.withOpacity(0.6),
+                                    borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Icon(
-                                        Icons.fullscreen,
+                                        Icons.zoom_in,
                                         color: Colors.white,
                                         size: 16,
                                       ),
-                                      SizedBox(width: Responsive.xs),
+                                      SizedBox(width: 4),
                                       Text(
                                         'اضغط للتكبير',
                                         style: LaapakTypography.labelSmall(
@@ -219,51 +213,34 @@ class InternalExaminationStep extends StatelessWidget {
                           ),
                         ),
                       ),
-                    ),
 
-                    // Description Section
-                    Container(
-                      padding: Responsive.cardPaddingInsets,
-                      decoration: BoxDecoration(
-                        color: LaapakColors.surface,
-                        borderRadius: BorderRadius.only(
-                          bottomLeft: Radius.circular(Responsive.cardRadius),
-                          bottomRight: Radius.circular(Responsive.cardRadius),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
+                      // Description
+                      if (description.isNotEmpty)
+                        Padding(
+                          padding: EdgeInsets.all(Responsive.md),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                width: 4,
-                                height: 20,
-                                decoration: BoxDecoration(
-                                  color: LaapakColors.primary,
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
+                              Icon(
+                                Icons.info_outline_rounded,
+                                size: 18,
+                                color: LaapakColors.textSecondary,
                               ),
                               SizedBox(width: Responsive.sm),
-                              Text(
-                                'شرح الاختبار',
-                                style: LaapakTypography.titleSmall(
-                                  color: LaapakColors.textPrimary,
+                              Expanded(
+                                child: Text(
+                                  description,
+                                  style: LaapakTypography.bodyMedium(
+                                    color: LaapakColors.textSecondary,
+                                  ),
                                 ),
                               ),
                             ],
                           ),
-                          SizedBox(height: Responsive.sm),
-                          Text(
-                            description,
-                            style: LaapakTypography.bodyMedium(
-                              color: LaapakColors.textPrimary,
-                            ).copyWith(height: 1.6),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                        ),
+                      SizedBox(height: Responsive.sm),
+                    ],
+                  ),
                 ),
               );
             },
@@ -273,22 +250,46 @@ class InternalExaminationStep extends StatelessWidget {
         // Notes
         if (notes.isNotEmpty)
           Card(
+            clipBehavior: Clip.antiAlias,
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(Responsive.cardRadius),
+            ),
             child: Padding(
               padding: Responsive.cardPaddingInsets,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'ملاحظات الفحص',
-                    style: LaapakTypography.titleLarge(
-                      color: LaapakColors.textPrimary,
-                    ),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.note_alt_outlined,
+                        color: LaapakColors.secondary,
+                      ),
+                      SizedBox(width: Responsive.sm),
+                      Text(
+                        'ملاحظات الفنى',
+                        style: LaapakTypography.titleLarge(
+                          color: LaapakColors.textPrimary,
+                        ),
+                      ),
+                    ],
                   ),
                   SizedBox(height: Responsive.md),
-                  Text(
-                    notes,
-                    style: LaapakTypography.bodyMedium(
-                      color: LaapakColors.textPrimary,
+                  Container(
+                    padding: EdgeInsets.all(Responsive.md),
+                    decoration: BoxDecoration(
+                      color: LaapakColors.surfaceVariant.withOpacity(0.4),
+                      borderRadius: BorderRadius.circular(Responsive.sm),
+                      border: Border.all(
+                        color: LaapakColors.border.withOpacity(0.5),
+                      ),
+                    ),
+                    child: Text(
+                      notes,
+                      style: LaapakTypography.bodyMedium(
+                        color: LaapakColors.textPrimary,
+                      ).copyWith(height: 1.5),
                     ),
                   ),
                 ],
@@ -299,11 +300,21 @@ class InternalExaminationStep extends StatelessWidget {
           Center(
             child: Padding(
               padding: Responsive.screenPaddingV,
-              child: Text(
-                'لا توجد معلومات عن الفحص الداخلي',
-                style: LaapakTypography.bodyMedium(
-                  color: LaapakColors.textSecondary,
-                ),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.assignment_outlined,
+                    size: 48,
+                    color: LaapakColors.textDisabled,
+                  ),
+                  SizedBox(height: Responsive.md),
+                  Text(
+                    'لا توجد معلومات عن الفحص الداخلي',
+                    style: LaapakTypography.bodyMedium(
+                      color: LaapakColors.textSecondary,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -316,24 +327,45 @@ class InternalExaminationStep extends StatelessWidget {
   /// Get component label in Arabic
   String _getComponentLabel(String component) {
     final comp = component.toLowerCase();
-    
+
     if (comp == 'info') {
       return 'تفاصيل اللابتوب';
-    } else if (comp == 'cpu') {
-      return 'اختبار البروسيسور';
-    } else if (comp == 'gpu') {
-      return 'اختبار كارت الشاشة';
-    } else if (comp.contains('hdd') || comp.contains('storage')) {
-      return 'اختبار الهارد';
-    } else if (comp == 'battery') {
-      return 'اختبار البطارية';
-    } else if (comp == 'keyboard') {
-      return 'اختبار الكيبورد';
-    } else if (comp == 'dxdiag') {
-      return 'اختبار DxDiag';
-    } else {
-      return 'اختبار $component';
     }
+    if (comp.contains('cpu')) {
+      return 'اختبار المعالج (CPU)';
+    }
+    if (comp.contains('gpu')) {
+      return 'اختبار كارت الشاشة (GPU)';
+    }
+    if (comp.contains('hdd') || comp.contains('storage')) {
+      return 'اختبار التخزين (HDD/SSD)';
+    }
+    if (comp.contains('battery')) {
+      return 'اختبار البطارية';
+    }
+    if (comp.contains('keyboard')) {
+      return 'اختبار لوحة المفاتيح';
+    }
+    if (comp.contains('dxdiag')) {
+      return 'تقرير DxDiag';
+    }
+    if (comp.contains('screen')) {
+      return 'اختبار الشاشة';
+    }
+    if (comp.contains('cam')) {
+      return 'اختبار الكاميرا';
+    }
+    if (comp.contains('audio') || comp.contains('sound')) {
+      return 'اختبار الصوت';
+    }
+    if (comp.contains('wifi') || comp.contains('net')) {
+      return 'اختبار الشبكة';
+    }
+    if (comp.contains('usb') || comp.contains('port')) {
+      return 'اختبار المنافذ';
+    }
+
+    return 'اختبار $component';
   }
 
   /// Get icon for component type
@@ -341,21 +373,42 @@ class InternalExaminationStep extends StatelessWidget {
     final comp = component.toLowerCase();
     if (comp.contains('cpu')) {
       return Icons.memory;
-    } else if (comp.contains('gpu')) {
-      return Icons.videogame_asset;
-    } else if (comp.contains('hdd') || comp.contains('storage')) {
-      return Icons.storage;
-    } else if (comp.contains('battery')) {
-      return Icons.battery_charging_full;
-    } else if (comp.contains('keyboard')) {
-      return Icons.keyboard;
-    } else if (comp.contains('info')) {
-      return Icons.info_outline;
-    } else if (comp.contains('dxdiag')) {
-      return Icons.bug_report;
-    } else {
-      return Icons.screenshot_monitor;
     }
+    if (comp.contains('gpu')) {
+      return Icons.videogame_asset;
+    }
+    if (comp.contains('hdd') || comp.contains('storage')) {
+      return Icons.storage;
+    }
+    if (comp.contains('battery')) {
+      return Icons.battery_charging_full;
+    }
+    if (comp.contains('keyboard')) {
+      return Icons.keyboard;
+    }
+    if (comp.contains('info')) {
+      return Icons.info_outline;
+    }
+    if (comp.contains('dxdiag')) {
+      return Icons.bug_report;
+    }
+    if (comp.contains('screen')) {
+      return Icons.monitor;
+    }
+    if (comp.contains('cam')) {
+      return Icons.camera_alt;
+    }
+    if (comp.contains('audio') || comp.contains('sound')) {
+      return Icons.volume_up;
+    }
+    if (comp.contains('wifi') || comp.contains('net')) {
+      return Icons.wifi;
+    }
+    if (comp.contains('usb') || comp.contains('port')) {
+      return Icons.usb;
+    }
+
+    return Icons.screenshot_monitor;
   }
 
   /// Get description text for a test screenshot based on component or notes
@@ -363,7 +416,9 @@ class InternalExaminationStep extends StatelessWidget {
     String descriptionText = '';
 
     // First check if there are notes
-    if (item['notes'] != null && item['notes'].toString().isNotEmpty) {
+    if (item['notes'] != null &&
+        item['notes'].toString().isNotEmpty &&
+        item['notes'].toString() != 'null') {
       descriptionText = item['notes'].toString();
     } else if (item['component'] != null) {
       final comp = item['component'].toString().toLowerCase();
@@ -401,4 +456,3 @@ class InternalExaminationStep extends StatelessWidget {
     return descriptionText;
   }
 }
-

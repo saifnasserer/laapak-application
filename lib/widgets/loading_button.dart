@@ -48,6 +48,9 @@ class LoadingButton extends StatelessWidget {
   /// Loading animation asset path (default: gray loading animation)
   final String? loadingAsset;
 
+  /// Custom border radius (default: Responsive.buttonRadius)
+  final double? borderRadius;
+
   const LoadingButton({
     super.key,
     required this.text,
@@ -59,6 +62,7 @@ class LoadingButton extends StatelessWidget {
     this.textColor,
     this.loadingSize = 24,
     this.loadingAsset,
+    this.borderRadius,
   });
 
   @override
@@ -81,7 +85,9 @@ class LoadingButton extends StatelessWidget {
                   .withValues(alpha: 0.7),
               disabledForegroundColor: textColor ?? Colors.white,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(Responsive.buttonRadius),
+                borderRadius: BorderRadius.circular(
+                  borderRadius ?? Responsive.buttonRadius,
+                ),
               ),
             ).copyWith(
               // Remove overlay color on press (no shadow/ripple effect)
@@ -91,21 +97,22 @@ class LoadingButton extends StatelessWidget {
             ? SizedBox(
                 height: loadingSize,
                 width: loadingSize,
-                child:
-                    (backgroundColor == null ||
-                        backgroundColor == LaapakColors.primary)
+                child: loadingAsset != null
+                    ? Lottie.asset(loadingAsset!, fit: BoxFit.contain)
+                    : (backgroundColor == null ||
+                          backgroundColor == LaapakColors.primary)
                     ? ColorFiltered(
                         colorFilter: const ColorFilter.mode(
                           Colors.white,
                           BlendMode.srcATop,
                         ),
                         child: Lottie.asset(
-                          loadingAsset ?? 'assets/animation/loading_gray.json',
+                          'assets/animation/loading_gray.json',
                           fit: BoxFit.contain,
                         ),
                       )
                     : Lottie.asset(
-                        loadingAsset ?? 'assets/animation/loading_gray.json',
+                        'assets/animation/loading_gray.json',
                         fit: BoxFit.contain,
                       ),
               )

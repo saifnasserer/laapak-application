@@ -7,6 +7,7 @@ import '../../utils/responsive.dart';
 import '../../utils/constants.dart';
 import '../../widgets/dismiss_keyboard.dart';
 import '../../widgets/device_specs_card.dart';
+import '../../widgets/empty_state.dart';
 import '../../providers/reports_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/notification_provider.dart';
@@ -14,6 +15,7 @@ import '../../services/share_service.dart';
 import '../reports/reports_screen.dart';
 import '../reports/reports_list_screen.dart';
 import '../warranty/warranty_screen.dart';
+// import '../profile/profile_screen.dart';
 
 /// Order Screen
 ///
@@ -118,101 +120,316 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
                   )
                 : null,
             centerTitle: true,
+            actions: [
+              /*
+              IconButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ProfileScreen(),
+                    ),
+                  );
+                },
+                icon: Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: LaapakColors.surfaceVariant,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.person_outline_rounded,
+                    color: LaapakColors.primary,
+                    size: 20,
+                  ),
+                ),
+              ),
+              SizedBox(width: Responsive.md),
+              */
+            ],
           ),
           body: SafeArea(
             child: DismissKeyboard(
               child: Directionality(
                 textDirection: TextDirection.rtl, // RTL for Arabic
-                child: SingleChildScrollView(
-                  physics: const ClampingScrollPhysics(),
-                  padding: Responsive.screenPadding,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // SizedBox(height: Responsive.lg),
+                child: reportsAsync.when(
+                  data: (reports) {
+                    // Show empty state when user has no reports
+                    if (reports.isEmpty) {
+                      return SingleChildScrollView(
+                        padding: Responsive.screenPadding,
+                        child: Column(
+                          children: [
+                            SizedBox(height: Responsive.xl),
 
-                      // Device Name (only when root page, no back stack)
-                      Builder(
-                        builder: (ctx) {
-                          if (!Navigator.canPop(ctx)) {
-                            return _buildDeviceName(firstReport);
-                          }
-                          return const SizedBox.shrink();
-                        },
-                      ),
-
-                      // Add spacing only if device name is shown
-                      Builder(
-                        builder: (ctx) {
-                          if (!Navigator.canPop(ctx)) {
-                            return SizedBox(height: Responsive.xl);
-                          }
-                          return const SizedBox.shrink();
-                        },
-                      ),
-
-                      // Device Specs Card (using reusable component)
-                      if (firstReport != null)
-                        DeviceSpecsCard(
-                          // deviceModel:
-                          //     firstReport['device_model']?.toString() ??
-                          //     'غير محدد',
-                          // serialNumber:
-                          //     firstReport['serial_number']?.toString() ??
-                          //     'غير محدد',
-                          inspectionDate:
-                              firstReport['inspection_date']?.toString() ??
-                              firstReport['created_at']?.toString() ??
-                              DateTime.now().toIso8601String(),
-                          // deviceStatus: 'جيد',
-                          additionalSpecs: _buildAdditionalSpecs(firstReport),
-                        )
-                      else
-                        reportsAsync.when(
-                          data: (_) => const SizedBox.shrink(),
-                          loading: () => Card(
-                            child: Padding(
-                              padding: Responsive.cardPaddingInsets,
-                              child: Center(
-                                child: CircularProgressIndicator(
-                                  color: LaapakColors.primary,
+                            // Icon
+                            Container(
+                              padding: EdgeInsets.all(Responsive.xl),
+                              decoration: BoxDecoration(
+                                color: LaapakColors.primary.withValues(
+                                  alpha: 0.1,
                                 ),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.description_outlined,
+                                size: Responsive.iconSizeXLarge,
+                                color: LaapakColors.primary,
                               ),
                             ),
-                          ),
-                          error: (error, _) => Card(
-                            child: Padding(
-                              padding: Responsive.cardPaddingInsets,
-                              child: Text(
-                                AppConstants.errorDeviceInfoLoadFailed,
-                                style: LaapakTypography.bodyMedium(
-                                  color: LaapakColors.error,
+
+                            SizedBox(height: Responsive.lg),
+
+                            // Title
+                            Text(
+                              'لا توجد تقارير متاحة',
+                              style: LaapakTypography.headlineSmall(
+                                color: LaapakColors.textPrimary,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+
+                            SizedBox(height: Responsive.md),
+
+                            // Description with two scenarios
+                            Container(
+                              padding: EdgeInsets.all(Responsive.md),
+                              decoration: BoxDecoration(
+                                color: LaapakColors.surface,
+                                borderRadius: BorderRadius.circular(
+                                  Responsive.cardRadius,
+                                ),
+                                border: Border.all(
+                                  color: LaapakColors.borderLight,
                                 ),
                               ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Scenario 1: Report in progress
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Container(
+                                        margin: EdgeInsets.only(top: 4),
+                                        width: 8,
+                                        height: 8,
+                                        decoration: BoxDecoration(
+                                          color: LaapakColors.primary,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                      SizedBox(width: Responsive.sm),
+                                      Expanded(
+                                        child: Text(
+                                          'لو عندك طلب وتقريرك لسه بيتجهز، استنى شوية وهيظهرلك قريب',
+                                          style: LaapakTypography.bodyMedium(
+                                            color: LaapakColors.textSecondary,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+
+                                  SizedBox(height: Responsive.sm),
+
+                                  // Scenario 2: Create new order
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Container(
+                                        margin: EdgeInsets.only(top: 4),
+                                        width: 8,
+                                        height: 8,
+                                        decoration: BoxDecoration(
+                                          color: LaapakColors.primary,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                      SizedBox(width: Responsive.sm),
+                                      Expanded(
+                                        child: Text(
+                                          'لو محتاج تعمل طلب جديد، تقدر تتواصل معانا',
+                                          style: LaapakTypography.bodyMedium(
+                                            color: LaapakColors.textSecondary,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            SizedBox(height: Responsive.xl),
+
+                            // Action Buttons
+                            Column(
+                              children: [
+                                // WhatsApp Button
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: Responsive.buttonHeight,
+                                  child: ElevatedButton.icon(
+                                    onPressed: () => _openWhatsApp(context),
+                                    icon: Icon(
+                                      Icons.phone,
+                                      color: Colors.white,
+                                    ),
+                                    label: Text(
+                                      'تواصل معانا واتساب',
+                                      style: LaapakTypography.button(
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Color(
+                                        0xFF25D366,
+                                      ), // WhatsApp green
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(
+                                          Responsive.buttonRadius,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                                SizedBox(height: Responsive.md),
+
+                                // Website Button
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: Responsive.buttonHeight,
+                                  child: OutlinedButton.icon(
+                                    onPressed: () => _openWebsite(context),
+                                    icon: Icon(
+                                      Icons.language,
+                                      color: LaapakColors.primary,
+                                    ),
+                                    label: Text(
+                                      'زيارة الموقع',
+                                      style: LaapakTypography.button(
+                                        color: LaapakColors.primary,
+                                      ),
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      side: BorderSide(
+                                        color: LaapakColors.primary,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(
+                                          Responsive.buttonRadius,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            SizedBox(height: Responsive.xl * 2),
+                            _buildLogoutButton(context),
+                          ],
+                        ),
+                      );
+                    }
+
+                    // Normal view with reports
+                    return SingleChildScrollView(
+                      physics: const ClampingScrollPhysics(),
+                      padding: Responsive.screenPadding,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // SizedBox(height: Responsive.lg),
+
+                          // Device Name (only when root page, no back stack)
+                          Builder(
+                            builder: (ctx) {
+                              if (!Navigator.canPop(ctx)) {
+                                return _buildDeviceName(firstReport);
+                              }
+                              return const SizedBox.shrink();
+                            },
+                          ),
+
+                          // Add spacing only if device name is shown
+                          Builder(
+                            builder: (ctx) {
+                              if (!Navigator.canPop(ctx)) {
+                                return SizedBox(height: Responsive.xl);
+                              }
+                              return const SizedBox.shrink();
+                            },
+                          ),
+
+                          // Device Specs Card (using reusable component)
+                          if (firstReport != null)
+                            DeviceSpecsCard(
+                              inspectionDate:
+                                  firstReport['inspection_date']?.toString() ??
+                                  firstReport['created_at']?.toString() ??
+                                  DateTime.now().toIso8601String(),
+                              additionalSpecs: _buildAdditionalSpecs(
+                                firstReport,
+                              ),
+                            ),
+
+                          SizedBox(height: Responsive.xl),
+
+                          // Navigation Buttons
+                          _buildNavigationButtons(context, firstReport),
+
+                          // Logout Button (only when there's no back stack - root screen)
+                          Builder(
+                            builder: (ctx) {
+                              if (!Navigator.canPop(ctx)) {
+                                return Column(
+                                  children: [
+                                    SizedBox(height: Responsive.xl),
+                                    _buildLogoutButton(ctx),
+                                  ],
+                                );
+                              }
+                              return const SizedBox.shrink();
+                            },
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  loading: () => Center(
+                    child: CircularProgressIndicator(
+                      color: LaapakColors.primary,
+                    ),
+                  ),
+                  error: (error, stackTrace) => SingleChildScrollView(
+                    padding: Responsive.screenPadding,
+                    child: Column(
+                      children: [
+                        SizedBox(height: Responsive.xl * 2),
+                        EmptyState.error(
+                          message: 'حدث خطأ في تحميل البيانات',
+                          action: ElevatedButton.icon(
+                            onPressed: () {
+                              ref.invalidate(clientReportsProvider);
+                            },
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('إعادة المحاولة'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: LaapakColors.primary,
+                              foregroundColor: Colors.white,
                             ),
                           ),
                         ),
-
-                      SizedBox(height: Responsive.xl),
-
-                      // Navigation Buttons
-                      _buildNavigationButtons(context, firstReport),
-
-                      // Logout Button (only when there's no back stack - root screen)
-                      Builder(
-                        builder: (ctx) {
-                          if (!Navigator.canPop(ctx)) {
-                            return Column(
-                              children: [
-                                SizedBox(height: Responsive.xl),
-                                _buildLogoutButton(ctx),
-                              ],
-                            );
-                          }
-                          return const SizedBox.shrink();
-                        },
-                      ),
-                    ],
+                        SizedBox(height: Responsive.xl * 2),
+                        _buildLogoutButton(context),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -329,38 +546,45 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
   }
 
   /// Build a navigation button
+  /// Build a navigation button
   Widget _buildNavButton({
     required IconData icon,
     required String text,
     required VoidCallback? onPressed,
   }) {
+    final isDisabled = onPressed == null;
+
     return SizedBox(
       height: Responsive.buttonHeight,
       child: OutlinedButton(
         onPressed: onPressed,
-        style:
-            OutlinedButton.styleFrom(
-              side: BorderSide(color: LaapakColors.border),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(Responsive.buttonRadius),
-              ),
-              padding: Responsive.buttonPadding,
-            ).copyWith(
-              foregroundColor: onPressed == null
-                  ? WidgetStateProperty.all(LaapakColors.textDisabled)
-                  : null,
-            ),
+        style: OutlinedButton.styleFrom(
+          backgroundColor: isDisabled ? LaapakColors.surfaceVariant : null,
+          side: isDisabled
+              ? BorderSide.none
+              : BorderSide(color: LaapakColors.border),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(Responsive.buttonRadius),
+          ),
+          padding: Responsive.buttonPadding,
+        ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
               text,
-              style: LaapakTypography.button(color: LaapakColors.textPrimary),
+              style: LaapakTypography.button(
+                color: isDisabled
+                    ? LaapakColors.textDisabled
+                    : LaapakColors.textPrimary,
+              ),
             ),
             Icon(
               icon,
               size: Responsive.iconSizeMedium,
-              color: LaapakColors.primary,
+              color: isDisabled
+                  ? LaapakColors.textDisabled
+                  : LaapakColors.primary,
             ),
           ],
         ),
@@ -634,5 +858,67 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
         ),
       ],
     );
+  }
+
+  /// Open WhatsApp with support number
+  Future<void> _openWhatsApp(BuildContext context) async {
+    try {
+      final phoneNumber = AppConstants.whatsappPhoneNumber;
+      final message = Uri.encodeComponent('مرحباً، أنا عميل في لابك');
+
+      // Try WhatsApp URL scheme first
+      final whatsappUrl = 'whatsapp://send?phone=$phoneNumber&text=$message';
+      final uri = Uri.parse(whatsappUrl);
+
+      final canLaunch = await canLaunchUrl(uri);
+      if (canLaunch) {
+        await launchUrl(uri);
+      } else {
+        // Fallback to web WhatsApp
+        final webUrl = 'https://wa.me/$phoneNumber?text=$message';
+        await launchUrl(
+          Uri.parse(webUrl),
+          mode: LaunchMode.externalApplication,
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'حدث خطأ أثناء فتح واتساب',
+              style: LaapakTypography.bodyMedium(
+                color: LaapakColors.background,
+              ),
+            ),
+            backgroundColor: LaapakColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Open Laapak website
+  Future<void> _openWebsite(BuildContext context) async {
+    try {
+      final websiteUrl = AppConstants.appWebsite;
+      final uri = Uri.parse(websiteUrl);
+
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'حدث خطأ أثناء فتح الموقع',
+              style: LaapakTypography.bodyMedium(
+                color: LaapakColors.background,
+              ),
+            ),
+            backgroundColor: LaapakColors.error,
+          ),
+        );
+      }
+    }
   }
 }

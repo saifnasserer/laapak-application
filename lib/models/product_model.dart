@@ -88,48 +88,51 @@ class ProductModel {
 }
 
 /// Mock Products Data
+/// 
+/// Note: This is a fallback mock data class. In production, products should be
+/// fetched from WooCommerce API. This class is kept for development/testing purposes only.
 class MockProducts {
   static List<ProductModel> get careProducts => [
         ProductModel(
           id: '1',
           name: 'مواد تنظيف مخصصة للشاشات',
           description: 'مناديل وسوائل تنظيف آمنة على الشاشات، تحافظ على طبقة الحماية وتزيل البقع والأتربة بسهولة.',
-          imageUrl: 'https://via.placeholder.com/300x200?text=Cleaning+Products',
+          imageUrl: '',
           price: 150.0,
         ),
         ProductModel(
           id: '2',
           name: 'شنطة حماية مبطنة',
           description: 'شنطة مخصصة للابتوب بحماية من الصدمات، مبطنة من الداخل لحماية الجهاز أثناء التنقل.',
-          imageUrl: 'https://via.placeholder.com/300x200?text=Protection+Bag',
+          imageUrl: '',
           price: 350.0,
         ),
         ProductModel(
           id: '3',
           name: 'قاعدة تبريد',
           description: 'قاعدة تبريد لتحسين تدفق الهواء وتقليل الحرارة، تحافظ على أداء الجهاز وتمنع السخونة الزائدة.',
-          imageUrl: 'https://via.placeholder.com/300x200?text=Cooling+Pad',
+          imageUrl: '',
           price: 250.0,
         ),
         ProductModel(
           id: '4',
           name: 'غطاء حماية للكيبورد',
           description: 'غطاء سيليكون لحماية الكيبورد من الأتربة والسوائل، سهل التركيب والتنظيف.',
-          imageUrl: 'https://via.placeholder.com/300x200?text=Keyboard+Cover',
+          imageUrl: '',
           price: 120.0,
         ),
         ProductModel(
           id: '5',
           name: 'شاحن احتياطي أصلي',
           description: 'شاحن احتياطي أصلي متوافق مع جهازك، يضمن شحن آمن وكفاءة عالية للبطارية.',
-          imageUrl: 'https://via.placeholder.com/300x200?text=Original+Charger',
+          imageUrl: '',
           price: 400.0,
         ),
         ProductModel(
           id: '6',
           name: 'حقيبة حماية للشاحن',
           description: 'حقيبة لحماية كابل الشاحن من التلف والانحناء، تحافظ على الشاحن لفترة أطول.',
-          imageUrl: 'https://via.placeholder.com/300x200?text=Charger+Case',
+          imageUrl: '',
           price: 80.0,
         ),
       ];

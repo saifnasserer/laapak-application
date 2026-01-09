@@ -7,6 +7,7 @@ import '../../widgets/empty_state.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/reports_provider.dart';
 import '../order/order_screen.dart';
+// import '../profile/profile_screen.dart';
 
 /// Reports List Screen
 ///
@@ -28,6 +29,31 @@ class ReportsListScreen extends ConsumerWidget {
         ),
         centerTitle: true,
         elevation: 0,
+        actions: [
+          /*
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ProfileScreen()),
+              );
+            },
+            icon: Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: LaapakColors.surfaceVariant,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.person_outline_rounded,
+                color: LaapakColors.primary,
+                size: 20,
+              ),
+            ),
+          ),
+          SizedBox(width: Responsive.md),
+          */
+        ],
       ),
       body: SafeArea(
         child: DismissKeyboard(
@@ -147,7 +173,21 @@ class ReportsListScreen extends ConsumerWidget {
           );
         },
         borderRadius: BorderRadius.circular(Responsive.cardRadius),
-        child: Padding(
+        child: Container(
+          decoration: BoxDecoration(
+            color: LaapakColors.surface,
+            borderRadius: BorderRadius.circular(Responsive.cardRadius),
+            border: Border.all(
+              color: LaapakColors.border.withValues(alpha: 0.5),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: LaapakColors.textPrimary.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
           padding: Responsive.cardPaddingInsets,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -164,7 +204,7 @@ class ReportsListScreen extends ConsumerWidget {
                           deviceModel,
                           style: LaapakTypography.titleMedium(
                             color: LaapakColors.textPrimary,
-                          ),
+                          ).copyWith(fontWeight: FontWeight.bold),
                         ),
                         if (serialNumber.isNotEmpty &&
                             serialNumber != 'غير محدد')
@@ -181,17 +221,16 @@ class ReportsListScreen extends ConsumerWidget {
                     ),
                   ),
                   Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: Responsive.sm,
-                      vertical: Responsive.xs,
-                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: statusColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       statusText,
-                      style: LaapakTypography.labelSmall(color: statusColor),
+                      style: LaapakTypography.labelSmall(
+                        color: statusColor,
+                      ).copyWith(fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
@@ -202,12 +241,19 @@ class ReportsListScreen extends ConsumerWidget {
               // Details Row
               Row(
                 children: [
-                  Icon(
-                    Icons.calendar_today_outlined,
-                    size: Responsive.iconSizeSmall,
-                    color: LaapakColors.textSecondary,
+                  Container(
+                    padding: EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: LaapakColors.surfaceVariant,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.calendar_today_outlined,
+                      size: 14,
+                      color: LaapakColors.textSecondary,
+                    ),
                   ),
-                  SizedBox(width: Responsive.xs),
+                  SizedBox(width: Responsive.sm),
                   Text(
                     'تاريخ المعاينة: $formattedDate',
                     style: LaapakTypography.bodySmall(
@@ -223,10 +269,17 @@ class ReportsListScreen extends ConsumerWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Icon(
-                    Icons.arrow_forward_ios,
-                    size: Responsive.iconSizeSmall,
-                    color: LaapakColors.primary,
+                  Container(
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: LaapakColors.primary.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.arrow_forward,
+                      size: 16,
+                      color: LaapakColors.primary,
+                    ),
                   ),
                 ],
               ),

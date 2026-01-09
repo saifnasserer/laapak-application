@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../theme/theme.dart';
 import '../../../utils/responsive.dart';
+import '../../../utils/constants.dart';
 import '../../device_care/device_care_screen.dart';
 
 /// Order Confirmation Step Widget
@@ -74,19 +75,35 @@ class OrderConfirmationStep extends StatelessWidget {
                 SizedBox(height: Responsive.lg),
 
                 // Order Number
-                _buildInfoRow('رقم الطلب', orderNumber),
+                _buildInfoRow(
+                  'رقم الطلب',
+                  orderNumber,
+                  Icons.confirmation_number_outlined,
+                ),
                 SizedBox(height: Responsive.md),
 
                 // Device Model
-                _buildInfoRow('موديل الجهاز', deviceModel),
+                _buildInfoRow(
+                  'موديل الجهاز',
+                  deviceModel,
+                  Icons.laptop_mac_outlined,
+                ),
                 SizedBox(height: Responsive.md),
 
                 // Serial Number
-                _buildInfoRow('الرقم التسلسلي', serialNumber),
+                _buildInfoRow(
+                  'الرقم التسلسلي',
+                  serialNumber,
+                  Icons.qr_code_outlined,
+                ),
                 SizedBox(height: Responsive.md),
 
                 // Inspection Date
-                _buildInfoRow('تاريخ المعاينة', formattedDate),
+                _buildInfoRow(
+                  'تاريخ المعاينة',
+                  formattedDate,
+                  Icons.calendar_today_outlined,
+                ),
                 SizedBox(height: Responsive.md),
 
                 // Status
@@ -162,7 +179,10 @@ class OrderConfirmationStep extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const DeviceCareScreen(),
+                  builder: (context) => DeviceCareScreen(
+                    reportOrderNumber: orderNumber,
+                    deviceName: deviceModel,
+                  ),
                 ),
               );
             },
@@ -190,28 +210,48 @@ class OrderConfirmationStep extends StatelessWidget {
   }
 
   /// Build info row for order confirmation
-  Widget _buildInfoRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: LaapakTypography.bodyMedium(color: LaapakColors.textSecondary),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: LaapakTypography.bodyMedium(color: LaapakColors.textPrimary),
-            textAlign: TextAlign.end,
+  Widget _buildInfoRow(String label, String value, IconData icon) {
+    return Container(
+      margin: EdgeInsets.only(bottom: Responsive.sm),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: LaapakColors.surfaceVariant,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 16, color: LaapakColors.textSecondary),
+              ),
+              SizedBox(width: Responsive.md),
+              Text(
+                label,
+                style: LaapakTypography.bodyMedium(
+                  color: LaapakColors.textSecondary,
+                ),
+              ),
+            ],
           ),
-        ),
-      ],
+          Expanded(
+            child: Text(
+              value,
+              style: LaapakTypography.titleSmall(
+                color: LaapakColors.textPrimary,
+              ),
+              textAlign: TextAlign.end,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   /// Open WhatsApp to confirm order
   Future<void> _confirmOrderOnWhatsApp(BuildContext context) async {
-    const phoneNumber = '+201013148007';
+    const phoneNumber = AppConstants.whatsappPhoneNumber;
     const message =
         'انا راجعت التقرير وحابب أاكد الاوردر دلوقتي، ممكن اعرف هيوصل امتى؟';
 

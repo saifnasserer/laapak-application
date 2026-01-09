@@ -2,21 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'colors.dart';
 import 'typography.dart';
+import '../utils/responsive.dart';
 
 /// Laapak App Theme
-/// 
+///
 /// Main theme configuration following Laapak Brand Guidelines.
 /// Supports both light and dark modes with RTL support for Arabic.
 class LaapakTheme {
   LaapakTheme._();
 
   // ==================== Light Theme ====================
-  
+
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
-      
+
       // Color Scheme
       colorScheme: ColorScheme.light(
         primary: LaapakColors.primary,
@@ -28,10 +29,10 @@ class LaapakTheme {
         onSurface: LaapakColors.textPrimary,
         onError: Colors.white,
       ),
-      
+
       // Scaffold
       scaffoldBackgroundColor: LaapakColors.background,
-      
+
       // App Bar
       appBarTheme: AppBarTheme(
         backgroundColor: LaapakColors.background,
@@ -43,21 +44,20 @@ class LaapakTheme {
           color: LaapakColors.textPrimary,
         ),
       ),
-      
+
       // Card Theme
       cardTheme: CardThemeData(
         color: LaapakColors.surface,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14), // Soft radius (12-16px)
-          side: BorderSide(
-            color: LaapakColors.borderLight,
-            width: 1,
-          ),
+          borderRadius: BorderRadius.circular(
+            Responsive.cardRadius,
+          ), // Soft radius
+          side: BorderSide(color: LaapakColors.borderLight, width: 1),
         ),
         margin: EdgeInsets.zero,
       ),
-      
+
       // Button Themes
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -66,69 +66,68 @@ class LaapakTheme {
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(Responsive.buttonRadius),
           ),
           textStyle: LaapakTypography.button(),
         ),
       ),
-      
+
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: LaapakColors.textPrimary,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(Responsive.buttonRadius),
           ),
-          textStyle: LaapakTypography.button(
-            color: LaapakColors.textPrimary,
-          ),
+          textStyle: LaapakTypography.button(color: LaapakColors.textPrimary),
         ),
       ),
-      
+
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: LaapakColors.textPrimary,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           side: BorderSide(color: LaapakColors.border),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(Responsive.buttonRadius),
           ),
-          textStyle: LaapakTypography.button(
-            color: LaapakColors.textPrimary,
-          ),
+          textStyle: LaapakTypography.button(color: LaapakColors.textPrimary),
         ),
       ),
-      
+
       // Input Decoration Theme
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: LaapakColors.surfaceVariant,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: LaapakColors.border),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: LaapakColors.border),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: LaapakColors.primary, width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: LaapakColors.error),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: LaapakColors.error, width: 2),
-        ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         hintStyle: LaapakTypography.bodyMedium(
           color: LaapakColors.textSecondary,
         ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(Responsive.buttonRadius),
+          borderSide: BorderSide(color: LaapakColors.border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(Responsive.buttonRadius),
+          borderSide: BorderSide(color: LaapakColors.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(Responsive.buttonRadius),
+          borderSide: BorderSide(color: LaapakColors.primary, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(Responsive.buttonRadius),
+          borderSide: BorderSide(color: LaapakColors.error),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(Responsive.buttonRadius),
+          borderSide: BorderSide(color: LaapakColors.error, width: 2),
+        ),
       ),
-      
+
       // Text Theme
       textTheme: TextTheme(
         displayLarge: LaapakTypography.displayLarge(),
@@ -147,30 +146,25 @@ class LaapakTheme {
         labelMedium: LaapakTypography.labelMedium(),
         labelSmall: LaapakTypography.labelSmall(),
       ),
-      
+
       // Divider Theme
       dividerTheme: DividerThemeData(
         color: LaapakColors.divider,
         thickness: 1,
         space: 1,
       ),
-      
+
       // Icon Theme
-      iconTheme: IconThemeData(
-        color: LaapakColors.textPrimary,
-        size: 24,
-      ),
-      
+      iconTheme: IconThemeData(color: LaapakColors.textPrimary, size: 24),
+
       // Chip Theme
       chipTheme: ChipThemeData(
         backgroundColor: LaapakColors.surfaceVariant,
         labelStyle: LaapakTypography.labelMedium(),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
-      
+
       // Bottom Navigation Bar Theme
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: LaapakColors.surface,
@@ -181,29 +175,22 @@ class LaapakTheme {
         type: BottomNavigationBarType.fixed,
         elevation: 8,
       ),
-      
+
       // Dialog Theme
       dialogTheme: DialogThemeData(
         backgroundColor: LaapakColors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         titleTextStyle: LaapakTypography.titleLarge(),
         contentTextStyle: LaapakTypography.bodyMedium(),
       ),
-      
+
       // Snackbar Theme
       snackBarTheme: SnackBarThemeData(
         backgroundColor: LaapakColors.darkGray,
-        contentTextStyle: LaapakTypography.bodyMedium(
-          color: Colors.white,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        contentTextStyle: LaapakTypography.bodyMedium(color: Colors.white),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         behavior: SnackBarBehavior.floating,
       ),
     );
   }
 }
-

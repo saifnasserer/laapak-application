@@ -153,28 +153,33 @@ class HardwareStatusStep extends StatelessWidget {
 
     String statusText;
     Color statusColor;
+    IconData statusIcon;
 
     switch (status.toLowerCase()) {
       case 'working':
         statusText = 'تم الفحص';
         statusColor = LaapakColors.success;
+        statusIcon = Icons.check_circle_outline;
         break;
       case 'not_available':
       case 'notavailable':
       case 'not available':
         statusText = 'غير متاح';
         statusColor = LaapakColors.textSecondary;
+        statusIcon = Icons.cancel_outlined;
         break;
       // Legacy status values (for backward compatibility)
       case 'excellent':
       case 'good':
         statusText = 'تم الفحص';
         statusColor = LaapakColors.success;
+        statusIcon = Icons.check_circle_outline;
         break;
       case 'fair':
       case 'acceptable':
         statusText = 'مقبول';
         statusColor = LaapakColors.warning;
+        statusIcon = Icons.info_outline;
         break;
       case 'poor':
       case 'bad':
@@ -182,34 +187,56 @@ class HardwareStatusStep extends StatelessWidget {
       case 'broken':
         statusText = 'ضعيف';
         statusColor = LaapakColors.error;
+        statusIcon = Icons.error_outline;
         break;
       default:
         statusText = status;
         statusColor = LaapakColors.textSecondary;
+        statusIcon = Icons.help_outline;
     }
 
+    // Map component names to Arabic (case-insensitive matching)
     // Map component names to Arabic (case-insensitive matching)
     final componentNames = {
       'screen': 'الشاشة',
       'battery': 'البطارية',
       'camera': 'الكاميرا',
-      'speakers': 'مكبرات الصوت',
-      'speaker': 'مكبر الصوت',
+      'cam': 'الكاميرا',
+      'webcam': 'الكاميرا',
+      'speakers': 'السماعات',
+      'speaker': 'السماعات',
+      'audio': 'السماعات',
+      'sound': 'السماعات',
       'microphone': 'الميكروفون',
+      'mic': 'الميكروفون',
       'charging_port': 'منفذ الشحن',
       'buttons': 'الأزرار',
       'housing': 'الهيكل',
-      'wi-fi': 'واي فاي',
-      'wifi': 'واي فاي',
-      'lan': 'شبكة محلية',
+      'wi-fi': 'Wi-Fi',
+      'wifi': 'Wi-Fi',
+      'lan': 'منفذ Ethernet (LAN) بالجهاز',
+      'ethernet': 'منفذ Ethernet (LAN) بالجهاز',
       'ports': 'المنافذ',
+      'usb': 'منافذ USB,Type-C',
+      'type-c': 'منافذ USB,Type-C',
       'keyboard': 'لوحة المفاتيح',
-      'touchpad': 'لوحة اللمس',
-      'card': 'البطاقة',
+      'touchpad': 'Touchpad',
+      'mouse': 'Touchpad',
+      'card': 'Card Reader',
+      'sd': 'Card Reader',
+      'reader': 'Card Reader',
       'audio_jack': 'منفذ الصوت',
       'audiojack': 'منفذ الصوت',
-      'displayport': 'منفذ العرض',
+      'headphone': 'منفذ الصوت',
+      'displayport': 'منفذ العرض (HDMI)',
+      'hdmi': 'منفذ العرض (HDMI)',
       'bluetooth': 'بلوتوث',
+      'fan': 'المراوح',
+      'cpu': 'المعالج',
+      'gpu': 'كارت الشاشة',
+      'ram': 'الذاكرة العشوائية',
+      'hdd': 'التخزين',
+      'ssd': 'التخزين',
     };
 
     // Normalize component name for lookup (lowercase, remove spaces/special chars)
@@ -227,28 +254,111 @@ class HardwareStatusStep extends StatelessWidget {
         )
         .value;
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          arabicName.isNotEmpty ? arabicName : componentName,
-          style: LaapakTypography.bodyMedium(color: LaapakColors.textPrimary),
-        ),
-        Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: Responsive.sm,
-            vertical: Responsive.xs,
+    return Container(
+      margin: EdgeInsets.only(bottom: Responsive.md),
+      padding: EdgeInsets.all(Responsive.sm),
+      decoration: BoxDecoration(
+        color: LaapakColors.surfaceVariant.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(Responsive.cardRadius),
+        border: Border.all(color: LaapakColors.border.withOpacity(0.5)),
+      ),
+      child: Row(
+        children: [
+          // Component Icon
+          Container(
+            padding: EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: LaapakColors.surface,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              _getComponentIcon(componentName),
+              color: LaapakColors.primary,
+              size: 20,
+            ),
           ),
-          decoration: BoxDecoration(
-            color: statusColor.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(6),
+          SizedBox(width: Responsive.md),
+
+          // Name
+          Expanded(
+            child: Text(
+              arabicName.isNotEmpty ? arabicName : componentName,
+              style: LaapakTypography.titleSmall(
+                color: LaapakColors.textPrimary,
+              ),
+            ),
           ),
-          child: Text(
-            statusText,
-            style: LaapakTypography.labelSmall(color: statusColor),
+
+          // Status Badge
+          Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: Responsive.sm,
+              vertical: 4,
+            ),
+            decoration: BoxDecoration(
+              color: statusColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: statusColor.withOpacity(0.2)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(statusIcon, size: 14, color: statusColor),
+                SizedBox(width: 4),
+                Text(
+                  statusText,
+                  style: LaapakTypography.labelSmall(
+                    color: statusColor,
+                  ).copyWith(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
+  }
+
+  /// Get icon for component type
+  IconData _getComponentIcon(String component) {
+    final comp = component.toLowerCase();
+    if (comp.contains('cpu') || comp.contains('processor')) return Icons.memory;
+    if (comp.contains('gpu') || comp.contains('graphics')) {
+      return Icons.videogame_asset;
+    }
+    if (comp.contains('hdd') ||
+        comp.contains('ssd') ||
+        comp.contains('storage')) {
+      return Icons.storage;
+    }
+    if (comp.contains('ram') || comp.contains('memory')) {
+      return Icons.memory_outlined;
+    }
+    if (comp.contains('battery')) return Icons.battery_charging_full;
+    if (comp.contains('keyboard')) return Icons.keyboard;
+    if (comp.contains('screen') ||
+        comp.contains('display') ||
+        comp.contains('lcd')) {
+      return Icons.monitor;
+    }
+    if (comp.contains('camera') || comp.contains('webcam')) {
+      return Icons.camera_alt;
+    }
+    if (comp.contains('speaker') ||
+        comp.contains('audio') ||
+        comp.contains('sound')) {
+      return Icons.volume_up;
+    }
+    if (comp.contains('mic')) return Icons.mic;
+    if (comp.contains('wifi') ||
+        comp.contains('network') ||
+        comp.contains('lan')) {
+      return Icons.wifi;
+    }
+    if (comp.contains('bluetooth')) return Icons.bluetooth;
+    if (comp.contains('port') || comp.contains('usb')) return Icons.usb;
+    if (comp.contains('touchpad') || comp.contains('mouse')) return Icons.mouse;
+    if (comp.contains('fan') || comp.contains('cool')) return Icons.ac_unit;
+    return Icons.devices_other;
   }
 }

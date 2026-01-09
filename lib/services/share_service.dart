@@ -11,10 +11,7 @@ class ShareService {
   /// Share text
   Future<void> shareText(String text, {String? subject}) async {
     try {
-      await Share.share(
-        text,
-        subject: subject,
-      );
+      await Share.share(text, subject: subject);
     } catch (e) {
       // Handle share error silently
     }
@@ -75,7 +72,8 @@ class ShareService {
 
   /// Share app
   Future<void> shareApp() async {
-    final text = '''
+    final text =
+        '''
 تطبيق ${AppConstants.appName}
 
 تطبيق لإدارة التقارير والفواتير والضمان
@@ -83,10 +81,6 @@ class ShareService {
 ${AppConstants.appWebsite}
 ''';
 
-    await shareText(
-      text,
-      subject: 'تطبيق ${AppConstants.appName}',
-    );
+    await shareText(text, subject: 'تطبيق ${AppConstants.appName}');
   }
 }
-

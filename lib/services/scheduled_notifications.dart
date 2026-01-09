@@ -15,6 +15,7 @@ class ScheduledNotifications {
   static const int warrantyMaintenance1IdBase = 2000;
   static const int warrantyMaintenance2IdBase = 3000;
   static const int weeklyCleaningReminderId = 9999;
+  static const int testRepeatingCleaningId = 8888;
 
   /// Schedule warranty-related notifications for a report
   ///
@@ -37,19 +38,22 @@ class ScheduledNotifications {
 
       // First periodic maintenance (6 months)
       final maintenancePeriodDays = 6 * 30;
-      final warranty3aMaintenanceDate =
-          inspectionDate.add(Duration(days: maintenancePeriodDays));
+      final warranty3aMaintenanceDate = inspectionDate.add(
+        Duration(days: maintenancePeriodDays),
+      );
 
       // Second periodic maintenance (12 months)
-      final warranty3bMaintenanceDate =
-          warranty3aMaintenanceDate.add(Duration(days: maintenancePeriodDays));
+      final warranty3bMaintenanceDate = warranty3aMaintenanceDate.add(
+        Duration(days: maintenancePeriodDays),
+      );
 
       // Schedule first periodic maintenance notification - Egyptian slang
       if (warranty3aMaintenanceDate.isAfter(now)) {
         await _notificationService.scheduleNotification(
           id: warranty3aMaintenanceId,
           title: 'وقت الصيانة الدورية المجانية',
-          body: 'دلوقتي وقت الصيانة المجانية - الفترة الأولى. روح لـ Laapak واستفيد منها!',
+          body:
+              'دلوقتي وقت الصيانة المجانية - الفترة الأولى. روح لـ Laapak واستفيد منها!',
           scheduledDate: warranty3aMaintenanceDate,
           payload: 'maintenance_period1|$reportId',
         );
@@ -60,7 +64,8 @@ class ScheduledNotifications {
         await _notificationService.scheduleNotification(
           id: warranty3bMaintenanceId,
           title: 'وقت الصيانة الدورية المجانية',
-          body: 'دلوقتي وقت آخر صيانة مجانية - الفترة التانية. روح لـ Laapak دلوقتي!',
+          body:
+              'دلوقتي وقت آخر صيانة مجانية - الفترة التانية. روح لـ Laapak دلوقتي!',
           scheduledDate: warranty3bMaintenanceDate,
           payload: 'maintenance_period2|$reportId',
         );
@@ -115,7 +120,7 @@ class ScheduledNotifications {
 
       // Find next Monday
       int daysUntilMonday = (DateTime.monday - now.weekday) % 7;
-      
+
       // If today is Monday
       if (daysUntilMonday == 0) {
         // If it's before 10 AM today, schedule for today
@@ -200,7 +205,7 @@ class ScheduledNotifications {
       // 3. The app was closed when the notification fired
       // Using the same ID (9999) will overwrite any existing scheduled notification
       await scheduleWeeklyCleaningReminder();
-      
+
       developer.log(
         '✅ Recurring notifications initialized',
         name: 'ScheduledNotifications',
@@ -212,5 +217,48 @@ class ScheduledNotifications {
       );
     }
   }
-}
 
+  /// Schedule a test repeating notification every 30 seconds for device cleaning
+  /// This is for debugging notification scheduling issues
+  Future<void> scheduleTestRepeatingCleaningNotification() async {
+    try {
+      final now = DateTime.now();
+      final nextNotificationTime = now.add(const Duration(seconds: 30));
+
+      await _notificationService.scheduleNotification(
+        id: testRepeatingCleaningId,
+        title: 'تنظيف اللاب! مهم جداً 😊 [TEST]',
+        body: 'خد 10 دقائق وامسحه عشان تحميه من المشاكل! (اختبار كل 30 ثانية)',
+        scheduledDate: nextNotificationTime,
+        payload: 'test_repeating_cleaning',
+        useExactScheduling: true, // Use exact scheduling for test notifications
+      );
+
+      developer.log(
+        '✅ Test repeating cleaning notification scheduled for: $nextNotificationTime (every 30 seconds)',
+        name: 'ScheduledNotifications',
+      );
+    } catch (e) {
+      developer.log(
+        '❌ Error scheduling test repeating cleaning notification: $e',
+        name: 'ScheduledNotifications',
+      );
+    }
+  }
+
+  /// Cancel test repeating notification
+  Future<void> cancelTestRepeatingCleaningNotification() async {
+    try {
+      await _notificationService.cancelNotification(testRepeatingCleaningId);
+      developer.log(
+        '✅ Test repeating cleaning notification cancelled',
+        name: 'ScheduledNotifications',
+      );
+    } catch (e) {
+      developer.log(
+        '❌ Error cancelling test repeating cleaning notification: $e',
+        name: 'ScheduledNotifications',
+      );
+    }
+  }
+}

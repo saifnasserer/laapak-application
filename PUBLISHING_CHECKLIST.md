@@ -86,13 +86,13 @@ Quick reference checklist for publishing Laapak app to Google Play Store.
 4. **Keep privacy policy updated** - Must reflect actual app behavior
 5. **Test thoroughly** - Before each release
 
-## 📞 Contact Information Template
+## 📞 Contact Information
 
-Update these in `PRIVACY_POLICY.html`:
+Contact information has been configured:
 ```
 Email: support@laapak.com
-Phone: +20 XXX XXX XXXX
-Address: [Your business address]
+Phone/WhatsApp: 01013148007
+Website: https://laapak.com
 ```
 
 ---

@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../theme/theme.dart';
 import '../../utils/responsive.dart';
 import '../../widgets/dismiss_keyboard.dart';
-import '../../widgets/notification_permission_dialog.dart';
 import '../../providers/reports_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/auth_provider.dart';
@@ -306,27 +305,22 @@ class _WarrantyScreenState extends ConsumerState<WarrantyScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Warranty Progress Bars
-        _buildWarrantyProgressBars(warrantyInfo),
+        // Warranty Status & Overview (Merged)
+        _buildWarrantyOverviewCard(warrantyInfo),
 
         SizedBox(height: Responsive.lg),
 
-        // Warranty Details Card
-        _buildWarrantyDetailsCard(warrantyInfo),
-
-        SizedBox(height: Responsive.lg),
-
-        // Notification Status Card
+        // Notification Settings (Compact to be visible but not overwhelming)
         _buildNotificationStatusCard(),
 
         SizedBox(height: Responsive.lg),
 
-        // Warranty Terms Card
+        // Warranty Terms (Collapsible)
         _buildWarrantyTermsCard(),
 
         SizedBox(height: Responsive.lg),
 
-        // Maintenance Timeline Card
+        // Maintenance Timeline (Collapsible)
         _buildMaintenanceTimelineCard(),
 
         SizedBox(height: Responsive.xl),
@@ -512,25 +506,36 @@ class _WarrantyScreenState extends ConsumerState<WarrantyScreen> {
     );
   }
 
-  /// Warranty progress bars for all 3 warranties
-  Widget _buildWarrantyProgressBars(Map<String, dynamic> warrantyInfo) {
+  /// Warranty Overview Card (Progress bars + Critical Dates)
+  Widget _buildWarrantyOverviewCard(Map<String, dynamic> warrantyInfo) {
     return Card(
       child: Padding(
         padding: Responsive.cardPaddingInsets,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'متابعة الضمان',
-              style: LaapakTypography.titleLarge(
-                color: LaapakColors.textPrimary,
-              ),
+            Row(
+              children: [
+                Icon(
+                  Icons.verified_user_outlined,
+                  color: LaapakColors.primary,
+                  size: Responsive.iconSizeMedium,
+                ),
+                SizedBox(width: Responsive.sm),
+                Text(
+                  'حالة الضمان',
+                  style: LaapakTypography.titleLarge(
+                    color: LaapakColors.textPrimary,
+                  ),
+                ),
+              ],
             ),
-            SizedBox(height: Responsive.xl),
+            SizedBox(height: Responsive.lg),
 
             // Warranty 1: 6 months manufacturing defects
             _buildWarrantyProgressBar(
               warrantyInfo['warranty1'] as Map<String, dynamic>,
+              showDates: true,
             ),
 
             SizedBox(height: Responsive.lg),
@@ -538,6 +543,7 @@ class _WarrantyScreenState extends ConsumerState<WarrantyScreen> {
             // Warranty 2: 14 days replacement
             _buildWarrantyProgressBar(
               warrantyInfo['warranty2'] as Map<String, dynamic>,
+              showDates: true,
             ),
 
             SizedBox(height: Responsive.lg),
@@ -600,6 +606,7 @@ class _WarrantyScreenState extends ConsumerState<WarrantyScreen> {
     final progress = warranty['progress'] as double;
     final isExpired = warranty['isExpired'] as bool;
     final daysRemaining = warranty['daysRemaining'] as int;
+    final expiryDate = warranty['expiryDate'] as DateTime;
 
     Color progressColor;
     String statusText;
@@ -692,12 +699,26 @@ class _WarrantyScreenState extends ConsumerState<WarrantyScreen> {
             ),
           ],
         ),
+
+        // Date Label (Added)
+        if (!isExpired) ...[
+          SizedBox(height: 2),
+          Text(
+            'ينتهي في: ${_formatDate(expiryDate)}',
+            style: LaapakTypography.labelSmall(
+              color: LaapakColors.textSecondary.withValues(alpha: 0.7),
+            ).copyWith(fontSize: 10),
+          ),
+        ],
       ],
     );
   }
 
   /// Build individual warranty progress bar
-  Widget _buildWarrantyProgressBar(Map<String, dynamic> warranty) {
+  Widget _buildWarrantyProgressBar(
+    Map<String, dynamic> warranty, {
+    bool showDates = false,
+  }) {
     final name = warranty['name'] as String;
     final progress = warranty['progress'] as double;
     final isExpired = warranty['isExpired'] as bool;
@@ -797,80 +818,52 @@ class _WarrantyScreenState extends ConsumerState<WarrantyScreen> {
             ),
           ],
         ),
+
+        // Date Display (Added for overview)
+        if (showDates && !isExpired) ...[
+          SizedBox(height: Responsive.xs),
+          Row(
+            children: [
+              Icon(
+                Icons.calendar_today_outlined,
+                size: 12,
+                color: LaapakColors.textSecondary,
+              ),
+              SizedBox(width: 4),
+              Text(
+                'من ${_formatDate((warranty['startDate'] as DateTime?) ?? DateTime.now())} إلى ${_formatDate(expiryDate)}',
+                style: LaapakTypography.labelSmall(
+                  color: LaapakColors.textSecondary,
+                ).copyWith(fontSize: 11),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }
 
-  /// Warranty details card
-  Widget _buildWarrantyDetailsCard(Map<String, dynamic> warrantyInfo) {
-    final startDate = warrantyInfo['startDate'] as DateTime;
-    final warranty1 = warrantyInfo['warranty1'] as Map<String, dynamic>;
-    final warranty2 = warrantyInfo['warranty2'] as Map<String, dynamic>;
-
-    return Card(
-      child: Padding(
-        padding: Responsive.cardPaddingInsets,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'تفاصيل الضمان',
-              style: LaapakTypography.titleLarge(
-                color: LaapakColors.textPrimary,
-              ),
-            ),
-            SizedBox(height: Responsive.md),
-            _buildInfoRow('تاريخ الشراء', _formatDate(startDate)),
-            SizedBox(height: Responsive.sm),
-            _buildInfoRow(
-              'انتهاء ضمان 14 يوم',
-              _formatDate(warranty2['expiryDate'] as DateTime),
-            ),
-            SizedBox(height: Responsive.sm),
-            _buildInfoRow(
-              'انتهاء ضمان 6 شهور',
-              _formatDate(warranty1['expiryDate'] as DateTime),
-            ),
-            SizedBox(height: Responsive.sm),
-            _buildInfoRow(
-              'انتهاء الصيانة الدورية - الفترة الأولى',
-              _formatDate(
-                (warrantyInfo['warranty3a']
-                        as Map<String, dynamic>)['expiryDate']
-                    as DateTime,
-              ),
-            ),
-            SizedBox(height: Responsive.sm),
-            _buildInfoRow(
-              'انتهاء الصيانة الدورية - الفترة الثانية',
-              _formatDate(
-                (warrantyInfo['warranty3b']
-                        as Map<String, dynamic>)['expiryDate']
-                    as DateTime,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Warranty terms card
+  /// Warranty terms card (Collapsible)
   Widget _buildWarrantyTermsCard() {
     return Card(
-      child: Padding(
-        padding: Responsive.cardPaddingInsets,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: Responsive.cardPaddingInsets,
+          childrenPadding: Responsive.cardPaddingInsets.copyWith(
+            top: 0,
+            bottom: 16,
+          ),
+          title: Text(
+            'شروط الضمان الأساسية',
+            style: LaapakTypography.titleLarge(color: LaapakColors.textPrimary),
+          ),
+          leading: Icon(
+            Icons.gavel_outlined,
+            color: LaapakColors.primary,
+            size: Responsive.iconSizeMedium,
+          ),
           children: [
-            Text(
-              'شروط الضمان الأساسية',
-              style: LaapakTypography.titleLarge(
-                color: LaapakColors.textPrimary,
-              ),
-            ),
-            SizedBox(height: Responsive.lg),
-
             // Warranty Exclusions
             _buildTermSection(
               icon: Icons.block_outlined,
@@ -945,31 +938,27 @@ class _WarrantyScreenState extends ConsumerState<WarrantyScreen> {
     );
   }
 
-  /// Maintenance timeline card
+  /// Maintenance timeline card (Collapsible)
   Widget _buildMaintenanceTimelineCard() {
     return Card(
-      child: Padding(
-        padding: Responsive.cardPaddingInsets,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: Responsive.cardPaddingInsets,
+          childrenPadding: Responsive.cardPaddingInsets.copyWith(
+            top: 0,
+            bottom: 16,
+          ),
+          title: Text(
+            'مراحل الصيانة الدورية',
+            style: LaapakTypography.titleLarge(color: LaapakColors.textPrimary),
+          ),
+          leading: Icon(
+            Icons.build_outlined,
+            color: LaapakColors.primary,
+            size: Responsive.iconSizeMedium,
+          ),
           children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.build_outlined,
-                  color: LaapakColors.textPrimary,
-                  size: Responsive.iconSizeMedium,
-                ),
-                SizedBox(width: Responsive.sm),
-                Text(
-                  'مراحل الصيانة الدورية في Laapak',
-                  style: LaapakTypography.titleLarge(
-                    color: LaapakColors.textPrimary,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: Responsive.lg),
             _buildTimelineItem(
               icon: Icons.thermostat_outlined,
               title: 'استبدال المعجون الحراري',
@@ -1069,32 +1058,12 @@ class _WarrantyScreenState extends ConsumerState<WarrantyScreen> {
     );
   }
 
-  /// Build info row
-  Widget _buildInfoRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: LaapakTypography.bodyMedium(color: LaapakColors.textSecondary),
-        ),
-        Flexible(
-          child: Text(
-            value,
-            style: LaapakTypography.bodyMedium(color: LaapakColors.textPrimary),
-            textAlign: TextAlign.end,
-          ),
-        ),
-      ],
-    );
-  }
-
   /// Format date
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
   }
 
-  /// Build notification status card with toggle
+  /// Build notification status card (Compact)
   Widget _buildNotificationStatusCard() {
     final permissionStatusAsync = ref.watch(
       notificationPermissionsStatusProvider,
@@ -1104,222 +1073,97 @@ class _WarrantyScreenState extends ConsumerState<WarrantyScreen> {
     return Card(
       child: Padding(
         padding: Responsive.cardPaddingInsets,
-        child: permissionStatusAsync.when(
-          data: (permissionGranted) {
-            return preferenceAsync.when(
-              data: (preferenceEnabled) {
-                final hasPermission = permissionGranted == true;
-                final isEnabled = hasPermission && preferenceEnabled;
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          isEnabled
-                              ? Icons.notifications_active
-                              : Icons.notifications_off,
-                          color: isEnabled
-                              ? LaapakColors.success
-                              : LaapakColors.textSecondary,
-                          size: Responsive.iconSizeMedium,
-                        ),
-                        SizedBox(width: Responsive.md),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                isEnabled
-                                    ? 'الإشعارات مفعلة'
-                                    : 'الإشعارات معطلة',
-                                style: LaapakTypography.titleSmall(
-                                  color: LaapakColors.textPrimary,
-                                ),
-                              ),
-                              SizedBox(height: Responsive.xs),
-                              Text(
-                                isEnabled
-                                    ? 'ستتلقى إشعاراً عند موعد الصيانة الدورية المجانية لتذكيرك باستخدام خدمة الصيانة المجانية.'
-                                    : preferenceEnabled && !hasPermission
-                                    ? 'يجب تفعيل صلاحيات الإشعارات أولاً'
-                                    : 'فعّل الإشعارات لتلقي تذكيرات بفحص الضمان ومواعيد الصيانة الدورية المجانية.',
-                                style: LaapakTypography.bodySmall(
-                                  color: LaapakColors.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Switch(
-                          value: preferenceEnabled,
-                          onChanged: hasPermission
-                              ? (value) async {
-                                  // Update preference
-                                  final storageServiceAsync = ref.read(
-                                    storageServiceProvider,
-                                  );
-                                  final storageService =
-                                      await storageServiceAsync.value;
-                                  if (storageService != null) {
-                                    await storageService
-                                        .setNotificationsEnabled(value);
-                                    ref.invalidate(
-                                      notificationPreferenceProvider,
-                                    );
-
-                                    final notificationService =
-                                        NotificationService();
-                                    await notificationService.initialize();
-
-                                    if (value) {
-                                      // Schedule notifications
-                                      await _scheduleWarrantyNotifications();
-                                      if (mounted) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              'تم تفعيل الإشعارات بنجاح',
-                                            ),
-                                            backgroundColor:
-                                                LaapakColors.success,
-                                            duration: const Duration(
-                                              seconds: 2,
-                                            ),
-                                          ),
-                                        );
-                                      }
-                                    } else {
-                                      // Cancel notifications
-                                      final reportId = widget.reportId;
-                                      if (reportId != null) {
-                                        await notificationService
-                                            .scheduledNotifications
-                                            .cancelWarrantyNotifications(
-                                              reportId,
-                                            );
-                                      }
-                                      if (mounted) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text('تم إيقاف الإشعارات'),
-                                            backgroundColor:
-                                                LaapakColors.textSecondary,
-                                            duration: const Duration(
-                                              seconds: 2,
-                                            ),
-                                          ),
-                                        );
-                                      }
-                                    }
-                                  }
-                                }
-                              : null, // Disable toggle if no permission
-                          activeColor: LaapakColors.primary,
-                        ),
-                      ],
+        child: Row(
+          children: [
+            Icon(
+              Icons.notifications_active_outlined,
+              color: LaapakColors.primary,
+              size: Responsive.iconSizeMedium,
+            ),
+            SizedBox(width: Responsive.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'تنبيهات الصيانة',
+                    style: LaapakTypography.titleMedium(
+                      color: LaapakColors.textPrimary,
                     ),
-                    if (!hasPermission) ...[
-                      SizedBox(height: Responsive.md),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: () async {
-                            final notificationService = NotificationService();
-                            await notificationService.initialize();
-
-                            final result = await notificationService
-                                .requestPermissions(forceRequest: true);
-
-                            if (mounted) {
-                              await Future.delayed(
-                                const Duration(milliseconds: 500),
-                              );
-                              ref.invalidate(
-                                notificationPermissionsStatusProvider,
-                              );
-
-                              final isEnabled = await notificationService
-                                  .areNotificationsEnabled();
-
-                              if (result == true || isEnabled == true) {
-                                // Schedule notifications if preference is enabled
-                                final prefValue = preferenceAsync.value;
-                                if (prefValue != null && prefValue == true) {
-                                  await _scheduleWarrantyNotifications();
-                                }
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        'تم تفعيل صلاحيات الإشعارات',
-                                      ),
-                                      backgroundColor: LaapakColors.success,
-                                      duration: const Duration(seconds: 2),
-                                    ),
-                                  );
-                                }
-                              } else if (result == null) {
-                                if (mounted) {
-                                  await NotificationPermissionDialog.show(
-                                    context,
-                                  );
-                                }
-                              }
-                            }
-                          },
-                          icon: Icon(
-                            Icons.notifications_active,
-                            size: Responsive.iconSizeSmall,
-                          ),
-                          label: Text('تفعيل صلاحيات الإشعارات'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: LaapakColors.primary,
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                );
-              },
-              loading: () => Center(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: Responsive.md),
-                  child: CircularProgressIndicator(
-                    color: LaapakColors.primary,
-                    strokeWidth: 2,
                   ),
-                ),
-              ),
-              error: (error, stackTrace) {
-                return Text(
-                  'خطأ في تحميل إعدادات الإشعارات',
-                  style: LaapakTypography.bodySmall(color: LaapakColors.error),
-                );
-              },
-            );
-          },
-          loading: () => Center(
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: Responsive.md),
-              child: CircularProgressIndicator(
-                color: LaapakColors.primary,
-                strokeWidth: 2,
+                  SizedBox(height: 2),
+                  Text(
+                    'تذكير بمواعيد الصيانة المجانية',
+                    style: LaapakTypography.labelSmall(
+                      color: LaapakColors.textSecondary,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-          error: (error, stackTrace) {
-            return Text(
-              'خطأ في تحميل حالة الإشعارات',
-              style: LaapakTypography.bodySmall(color: LaapakColors.error),
-            );
-          },
+            permissionStatusAsync.when(
+              data: (permissionGranted) {
+                return preferenceAsync.when(
+                  data: (preferenceEnabled) {
+                    final hasPermission = permissionGranted == true;
+                    // If no permission, showing a button instead of a switch would be better
+                    // But to keep it compact, we can just show the switch which triggers permission request if off
+                    return Switch(
+                      value: hasPermission && preferenceEnabled,
+                      onChanged: (value) async {
+                        final notificationService = NotificationService();
+                        if (value && !hasPermission) {
+                          // Request permission
+                          final result = await notificationService
+                              .requestPermissions(forceRequest: true);
+                          ref.invalidate(notificationPermissionsStatusProvider);
+                          if (result != true) return;
+                        }
+
+                        // Update preference
+                        final storageService = ref
+                            .read(storageServiceProvider)
+                            .value;
+                        if (storageService != null) {
+                          await storageService.setNotificationsEnabled(value);
+                          ref.invalidate(notificationPreferenceProvider);
+                          await notificationService.initialize();
+
+                          if (value) {
+                            await _scheduleWarrantyNotifications();
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('تم تفعيل التنبيهات'),
+                                  backgroundColor: LaapakColors.success,
+                                ),
+                              );
+                            }
+                          } else {
+                            if (widget.reportId != null) {
+                              await notificationService.scheduledNotifications
+                                  .cancelWarrantyNotifications(
+                                    widget.reportId!,
+                                  );
+                            }
+                          }
+                        }
+                      },
+                      activeTrackColor: LaapakColors.primary,
+                    );
+                  },
+                  loading: () => SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  error: (_, __) => Icon(Icons.error_outline),
+                );
+              },
+              loading: () => SizedBox(),
+              error: (_, __) => SizedBox(),
+            ),
+          ],
         ),
       ),
     );

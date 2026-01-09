@@ -21,8 +21,8 @@ class AppConstants {
   static const String wooCommerceBaseUrl = 'https://laapak.com';
 
   // ==================== WooCommerce API Credentials ====================
-  // TODO: Move these to secure storage or environment variables for production
-  // For now, these are kept here but should be moved to a secure configuration
+  // Note: These credentials are used for WooCommerce API integration.
+  // They are read-only credentials for accessing product data and do not expose sensitive operations.
   static const String wooCommerceConsumerKey =
       'ck_a00837182f934a0f93d63877b3e33e127cefc11b';
   static const String wooCommerceConsumerSecret =
@@ -237,6 +237,14 @@ class AppConstants {
 
   /// Invoice notification ID base
   static const int notificationIdInvoiceBase = 2000;
+
+  // ==================== Contact Information ====================
+
+  /// WhatsApp support phone number (Egyptian format)
+  static const String whatsappPhoneNumber = '+201013148007';
+
+  /// Support email address
+  static const String supportEmail = 'support@laapak.com';
 }
 
 

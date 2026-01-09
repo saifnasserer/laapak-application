@@ -122,21 +122,29 @@ class NotificationService {
           name: 'Notifications',
         );
 
-        // Request permissions on Android 13+ (don't await to avoid blocking initialization)
+        // Request permissions on Android 13+ immediately during initialization
         if (Platform.isAndroid) {
-          _requestAndroidPermissions().then((granted) {
-            if (granted != null && granted == true) {
-              developer.log(
-                '✅ Notification permissions granted on initialization',
-                name: 'Notifications',
-              );
-            } else {
-              developer.log(
-                '⚠️ Notification permissions not granted - user may need to enable in settings',
-                name: 'Notifications',
-              );
-            }
-          });
+          developer.log(
+            '📱 Requesting notification permissions during initialization...',
+            name: 'Notifications',
+          );
+          final granted = await _requestAndroidPermissions();
+          if (granted != null && granted == true) {
+            developer.log(
+              '✅ Notification permissions granted on initialization',
+              name: 'Notifications',
+            );
+          } else if (granted == null) {
+            developer.log(
+              '⚠️ Notification permissions denied - user needs to enable in settings',
+              name: 'Notifications',
+            );
+          } else {
+            developer.log(
+              '⚠️ Notification permissions not granted',
+              name: 'Notifications',
+            );
+          }
         }
 
         return true;
@@ -348,6 +356,12 @@ class NotificationService {
       return;
     }
 
+    // Reschedule for next 30 seconds (fire and forget)
+    if (payload == 'test_repeating_cleaning') {
+      scheduledNotifications.scheduleTestRepeatingCleaningNotification();
+      return;
+    }
+
     // Weekly cleaning reminder - navigate to device care screen (cleaning step)
     if (payload == 'weekly_cleaning_reminder' ||
         payload == 'test_weekly_cleaning') {
@@ -510,6 +524,17 @@ class NotificationService {
     );
   }
 
+  /// Start test repeating notification (every 30 seconds)
+  /// This is for debugging notification scheduling
+  Future<void> startTestRepeatingNotification() async {
+    await scheduledNotifications.scheduleTestRepeatingCleaningNotification();
+  }
+
+  /// Stop test repeating notification
+  Future<void> stopTestRepeatingNotification() async {
+    await scheduledNotifications.cancelTestRepeatingCleaningNotification();
+  }
+
   /// Cancel a specific notification
   Future<void> cancelNotification(int id) async {
     try {
@@ -543,6 +568,8 @@ class NotificationService {
     required String body,
     required DateTime scheduledDate,
     String? payload,
+    bool useExactScheduling =
+        false, // For test notifications, use exact scheduling
   }) async {
     if (!_initialized) {
       developer.log(
@@ -559,8 +586,9 @@ class NotificationService {
       }
     }
 
+    final now = DateTime.now();
     // Don't schedule if the date is in the past
-    if (scheduledDate.isBefore(DateTime.now())) {
+    if (scheduledDate.isBefore(now)) {
       developer.log(
         '⚠️ Cannot schedule notification: scheduled date is in the past',
         name: 'Notifications',
@@ -628,18 +656,24 @@ class NotificationService {
       // Convert DateTime to TZDateTime
       final scheduledTZDate = tz.TZDateTime.from(scheduledDate, tz.local);
 
-      // Schedule notification using inexact mode (no exact alarm permission required)
+      // Choose scheduling mode: exact for test notifications, inexact for production
+      AndroidScheduleMode scheduleMode = AndroidScheduleMode.inexact;
+      if (useExactScheduling) {
+        scheduleMode = AndroidScheduleMode.exactAllowWhileIdle;
+      }
+
       await _notificationsPlugin.zonedSchedule(
         id,
         title,
         body,
         scheduledTZDate,
         notificationDetails,
-        androidScheduleMode: AndroidScheduleMode.inexact,
+        androidScheduleMode: scheduleMode,
         payload: payload,
       );
+
       developer.log(
-        '✅ Notification scheduled with inexact mode: $title at $scheduledDate (ID: $id)',
+        '✅ Notification scheduled with ${useExactScheduling ? "exact" : "inexact"} mode: $title at $scheduledDate (ID: $id)',
         name: 'Notifications',
       );
     } catch (e) {

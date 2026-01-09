@@ -104,7 +104,7 @@ final setNotificationPreferenceProvider = FutureProvider.autoDispose
     .family<bool, bool>((ref, enabled) async {
       try {
         final storageServiceAsync = ref.read(storageServiceProvider);
-        final storageService = await storageServiceAsync.value;
+        final storageService = storageServiceAsync.value;
         if (storageService != null) {
           await storageService.setNotificationsEnabled(enabled);
           // Invalidate preference provider to refresh

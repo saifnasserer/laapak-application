@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:developer' as developer;
 import '../../theme/theme.dart';
 import '../../utils/responsive.dart';
 import '../../models/product_model.dart';
@@ -18,7 +20,15 @@ import '../../widgets/empty_state.dart';
 class DeviceCareScreen extends ConsumerStatefulWidget {
   final int? initialStep;
 
-  const DeviceCareScreen({super.key, this.initialStep});
+  final String? reportOrderNumber;
+  final String? deviceName;
+
+  const DeviceCareScreen({
+    super.key,
+    this.initialStep,
+    this.reportOrderNumber,
+    this.deviceName,
+  });
 
   @override
   ConsumerState<DeviceCareScreen> createState() => _DeviceCareScreenState();
@@ -26,8 +36,11 @@ class DeviceCareScreen extends ConsumerStatefulWidget {
 
 class _DeviceCareScreenState extends ConsumerState<DeviceCareScreen> {
   int _currentStep = 0;
+  PageController? _pageControllerNullable;
+  PageController get _pageController =>
+      _pageControllerNullable ??= PageController(initialPage: _currentStep);
 
-  static const int _totalSteps = 7; // Total number of care steps
+  static const int _totalSteps = 5; // Total number of care steps
 
   @override
   void initState() {
@@ -38,6 +51,12 @@ class _DeviceCareScreenState extends ConsumerState<DeviceCareScreen> {
     _currentStep = requestedStep >= 0 && requestedStep < _totalSteps
         ? requestedStep
         : 0;
+  }
+
+  @override
+  void dispose() {
+    _pageControllerNullable?.dispose();
+    super.dispose();
   }
 
   final List<Map<String, dynamic>> _careSteps = [
@@ -82,13 +101,7 @@ class _DeviceCareScreenState extends ConsumerState<DeviceCareScreen> {
       ],
       'solution': 'دايمًا استخدم الجهاز على سطح يسمح بمرور الهواء.',
     },
-    {
-      'icon': Icons.water_drop_outlined,
-      'title': 'السوائل والأكل',
-      'subtitle': 'إبعاد السوائل عن الجهاز قدر الإمكان',
-      'problems': ['تلف مفاجئ', 'أعطال غير قابلة للإصلاح أحيانًا'],
-      'solution': 'خليك حريص إن الأكل والمشروبات بعيد عن الجهاز.',
-    },
+
     {
       'icon': Icons.power_outlined,
       'title': 'الشاحن والبطارية',
@@ -106,13 +119,7 @@ class _DeviceCareScreenState extends ConsumerState<DeviceCareScreen> {
       'solution':
           'الأسلوب البسيط ده بيساعد يحافظ على كفاءة البطارية وعمرها لأطول فترة ممكنة.',
     },
-    {
-      'icon': Icons.luggage_outlined,
-      'title': 'الحمل والتنقل',
-      'subtitle': 'تجنب وضع الجهاز داخل شنطة غير مبطنة',
-      'problems': ['تكسر مفصلات الشاشة', 'تأثر على الهارد أو البوردة'],
-      'solution': 'استخدم شنطة مخصصة لحماية الجهاز أثناء التنقل.',
-    },
+
     {
       'icon': Icons.shopping_bag_outlined,
       'title': 'منتجات مفيدة',
@@ -135,44 +142,56 @@ class _DeviceCareScreenState extends ConsumerState<DeviceCareScreen> {
         body: SafeArea(
           top: true,
           bottom: false,
-          child: CustomScrollView(
-            slivers: [
-              // Sliver AppBar (scrollable header)
-              SliverAppBar(
-                backgroundColor: LaapakColors.background,
-                elevation: 0,
-                pinned: false, // Allow it to scroll away completely
-                floating: true, // Snap back when scrolling up
-                leading: IconButton(
-                  icon: Icon(
-                    Icons.arrow_back_ios_outlined,
-                    color: LaapakColors.textPrimary,
+          child: NestedScrollView(
+            headerSliverBuilder: (context, innerBoxIsScrolled) {
+              return [
+                // Sliver AppBar (scrollable header)
+                SliverAppBar(
+                  backgroundColor: LaapakColors.background,
+                  elevation: 0,
+                  pinned: false, // Allow it to scroll away completely
+                  floating: true, // Snap back when scrolling up
+                  leading: IconButton(
+                    icon: Icon(
+                      Icons.arrow_back_ios_outlined,
+                      color: LaapakColors.textPrimary,
+                    ),
+                    onPressed: () => Navigator.of(context).pop(),
                   ),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-                title: Text(
-                  'ازاي تحافظ على جهازك؟',
-                  style: LaapakTypography.titleLarge(
-                    color: LaapakColors.textPrimary,
+                  title: Text(
+                    'ازاي تحافظ على جهازك؟',
+                    style: LaapakTypography.titleLarge(
+                      color: LaapakColors.textPrimary,
+                    ),
                   ),
                 ),
-              ),
 
-              // Step Indicator
-              SliverToBoxAdapter(child: _buildStepIndicator()),
-
-              // Content
-              SliverPadding(
-                padding: Responsive.screenPadding,
-                sliver: SliverToBoxAdapter(child: _buildStepContent()),
-              ),
-
-              // Navigation Buttons
-              SliverToBoxAdapter(child: _buildNavigationButtons()),
-
-              // Bottom padding to account for cart bottom bar
-              const SliverToBoxAdapter(child: SizedBox(height: 80)),
-            ],
+                // Step Indicator
+                SliverToBoxAdapter(child: _buildStepIndicator()),
+              ];
+            },
+            body: PageView.builder(
+              controller: _pageController,
+              onPageChanged: (index) {
+                setState(() {
+                  _currentStep = index;
+                });
+              },
+              itemCount: _careSteps.length,
+              itemBuilder: (context, index) {
+                return SingleChildScrollView(
+                  padding: Responsive.screenPadding,
+                  child: Column(
+                    children: [
+                      _buildStepContent(index),
+                      _buildNavigationButtons(index),
+                      // Bottom padding to account for cart bottom bar
+                      const SizedBox(height: 80),
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
         ),
         bottomNavigationBar: _buildCartBottomBar(),
@@ -183,7 +202,7 @@ class _DeviceCareScreenState extends ConsumerState<DeviceCareScreen> {
   /// Step indicator
   Widget _buildStepIndicator() {
     return Container(
-      padding: Responsive.screenPaddingV,
+      padding: EdgeInsets.symmetric(vertical: Responsive.md, horizontal: 40.0),
       decoration: BoxDecoration(
         color: LaapakColors.surface,
         border: Border(bottom: BorderSide(color: LaapakColors.borderLight)),
@@ -197,9 +216,11 @@ class _DeviceCareScreenState extends ConsumerState<DeviceCareScreen> {
           return Expanded(
             child: GestureDetector(
               onTap: () {
-                setState(() {
-                  _currentStep = index;
-                });
+                _pageController.animateToPage(
+                  index,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                );
               },
               child: Column(
                 children: [
@@ -236,10 +257,10 @@ class _DeviceCareScreenState extends ConsumerState<DeviceCareScreen> {
   }
 
   /// Build step content
-  Widget _buildStepContent() {
-    final step = _careSteps[_currentStep];
+  Widget _buildStepContent(int stepIndex) {
+    final step = _careSteps[stepIndex];
 
-    if (_currentStep == 0) {
+    if (stepIndex == 0) {
       // Introduction step
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -465,7 +486,7 @@ class _DeviceCareScreenState extends ConsumerState<DeviceCareScreen> {
             ),
 
           // Notification status card for cleaning step (step 2, index 1)
-          if (_currentStep == 1) ...[
+          if (stepIndex == 1) ...[
             SizedBox(height: Responsive.lg),
             _buildNotificationStatusCard(),
           ],
@@ -559,112 +580,180 @@ class _DeviceCareScreenState extends ConsumerState<DeviceCareScreen> {
   }
 
   /// Navigation buttons (Previous/Next)
-  Widget _buildNavigationButtons() {
+  Widget _buildNavigationButtons(int stepIndex) {
     final totalSteps = _careSteps.length;
-    final canGoPrevious = _currentStep > 0;
-    final canGoNext = _currentStep < totalSteps - 1;
+    final canGoPrevious = stepIndex > 0;
+    final canGoNext = stepIndex < totalSteps - 1;
 
-    return Container(
-      padding: Responsive.screenPadding,
-      decoration: BoxDecoration(
-        color: LaapakColors.surface,
-        border: Border(top: BorderSide(color: LaapakColors.borderLight)),
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        vertical: Responsive.lg,
+        horizontal: Responsive.md,
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // Previous Button
-          _buildNavIconButton(
-            icon: Icons.arrow_back_ios_outlined,
-            onPressed: canGoPrevious
-                ? () {
-                    setState(() {
-                      _currentStep--;
-                    });
-                  }
-                : null,
-          ),
+          if (canGoPrevious)
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(left: Responsive.sm),
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    _pageController.previousPage(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    );
+                  },
+                  style: OutlinedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        Responsive.buttonRadius,
+                      ),
+                    ),
+                    side: BorderSide(color: LaapakColors.primary),
+                  ),
+                  icon: Icon(
+                    Icons.arrow_forward,
+                    color: LaapakColors.primary,
+                  ), // RTL: Arrow forward points right (back)
+                  label: Text(
+                    'السابق',
+                    style: LaapakTypography.titleMedium(
+                      color: LaapakColors.primary,
+                    ),
+                  ),
+                ),
+              ),
+            )
+          else
+            Spacer(),
 
-          // Step Indicator Text
-          Text(
-            '${_currentStep + 1} / $totalSteps',
-            style: LaapakTypography.bodyMedium(
-              color: LaapakColors.textSecondary,
-            ),
-          ),
+          SizedBox(width: Responsive.md),
 
           // Next Button
-          _buildNavIconButton(
-            icon: Icons.arrow_forward_ios_outlined,
-            onPressed: canGoNext
-                ? () {
-                    setState(() {
-                      _currentStep++;
-                    });
-                  }
-                : null,
-          ),
+          if (canGoNext)
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(right: Responsive.sm),
+                child: ElevatedButton(
+                  onPressed: () {
+                    _pageController.nextPage(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        Responsive.buttonRadius,
+                      ),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'التالي',
+                        style: LaapakTypography.titleMedium(
+                          color: Colors.white,
+                        ).copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      SizedBox(width: 8),
+                      Icon(Icons.arrow_forward, color: Colors.white),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          else
+            // Finish Button
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(right: Responsive.sm),
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: LaapakColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    elevation: 4,
+                    shadowColor: LaapakColors.primary.withOpacity(0.4),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        Responsive.buttonRadius,
+                      ),
+                    ),
+                  ),
+                  icon: Icon(Icons.check, color: Colors.white),
+                  label: Text(
+                    'ضن',
+                    style: LaapakTypography.titleMedium(
+                      color: Colors.white,
+                    ).copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ),
         ],
-      ),
-    );
-  }
-
-  /// Build circular navigation icon button
-  Widget _buildNavIconButton({
-    required IconData icon,
-    required VoidCallback? onPressed,
-  }) {
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: BoxDecoration(
-        color: onPressed != null
-            ? LaapakColors.primary
-            : LaapakColors.surfaceVariant,
-        shape: BoxShape.circle,
-      ),
-      child: IconButton(
-        icon: Icon(
-          icon,
-          color: onPressed != null ? Colors.white : LaapakColors.textDisabled,
-          size: 20,
-        ),
-        onPressed: onPressed,
-        padding: EdgeInsets.zero,
       ),
     );
   }
 
   /// Build product card with image, description, and cart button
   Widget _buildProductCard(ProductModel product) {
-    return Card(
+    return Container(
+      decoration: BoxDecoration(
+        color: LaapakColors.surface,
+        borderRadius: BorderRadius.circular(Responsive.cardRadius),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+        border: Border.all(color: LaapakColors.border.withOpacity(0.5)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Product Image
           ClipRRect(
             borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(Responsive.buttonRadius),
-              topRight: Radius.circular(Responsive.buttonRadius),
+              topLeft: Radius.circular(Responsive.cardRadius),
+              topRight: Radius.circular(Responsive.cardRadius),
             ),
             child: AspectRatio(
-              aspectRatio: 1.0, // Square aspect ratio (1:1)
-              child: CachedImage(
-                imageUrl: product.imageUrl,
-                width: double.infinity,
-                height: double.infinity,
-                fit: BoxFit.contain,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(Responsive.buttonRadius),
-                  topRight: Radius.circular(Responsive.buttonRadius),
-                ),
+              aspectRatio: 1.2, // Slightly wider than square
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Container(
+                    color: Colors.white,
+                  ), // White background for product images
+                  Padding(
+                    padding: EdgeInsets.all(Responsive.md),
+                    child: CachedImage(
+                      imageUrl: product.imageUrl,
+                      width: double.infinity,
+                      height: double.infinity,
+                      fit: BoxFit.contain,
+                      borderRadius: BorderRadius.zero,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
 
           // Product Info
           Padding(
-            padding: Responsive.cardPaddingInsets,
+            padding: EdgeInsets.all(Responsive.md),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -673,41 +762,53 @@ class _DeviceCareScreenState extends ConsumerState<DeviceCareScreen> {
                   product.name,
                   style: LaapakTypography.titleMedium(
                     color: LaapakColors.textPrimary,
-                  ),
+                  ).copyWith(fontWeight: FontWeight.bold),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                SizedBox(height: Responsive.sm),
+                SizedBox(height: Responsive.xs),
 
                 // Product Description
                 Text(
-                  product.description,
-                  style: LaapakTypography.bodyMedium(
+                  product.description.replaceAll(
+                    RegExp(r'<[^>]*>'),
+                    '',
+                  ), // Remove HTML tags
+                  style: LaapakTypography.bodySmall(
                     color: LaapakColors.textSecondary,
                   ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                 ),
+                SizedBox(height: Responsive.md),
 
                 // Price and Cart Button
-                if (product.price != null) ...[
-                  SizedBox(height: Responsive.md),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '${product.price!.toStringAsFixed(0)} ج.م',
-                        style: LaapakTypography.titleSmall(
-                          color: LaapakColors.primary,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    if (product.price != null)
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: Responsive.sm,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: LaapakColors.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${product.price!.toStringAsFixed(0)} ج.م',
+                          style: LaapakTypography.titleSmall(
+                            color: LaapakColors.primary,
+                          ).copyWith(fontWeight: FontWeight.bold),
                         ),
                       ),
-                      _buildCartButton(product),
-                    ],
-                  ),
-                ] else ...[
-                  SizedBox(height: Responsive.md),
-                  SizedBox(
-                    height: 36,
-                    width: double.infinity,
-                    child: _buildCartButton(product),
-                  ),
-                ],
+
+                    // Add to Cart Button (Compact)
+                    SizedBox(height: 40, child: _buildCartButton(product)),
+                  ],
+                ),
               ],
             ),
           ),
@@ -875,7 +976,7 @@ class _DeviceCareScreenState extends ConsumerState<DeviceCareScreen> {
                                     storageServiceProvider,
                                   );
                                   final storageService =
-                                      await storageServiceAsync.value;
+                                      storageServiceAsync.value;
                                   if (storageService != null) {
                                     await storageService
                                         .setNotificationsEnabled(value);
@@ -931,7 +1032,7 @@ class _DeviceCareScreenState extends ConsumerState<DeviceCareScreen> {
                                   }
                                 }
                               : null, // Disable toggle if no permission
-                          activeColor: LaapakColors.primary,
+                          activeThumbColor: LaapakColors.primary,
                         ),
                       ],
                     ),
@@ -1072,7 +1173,9 @@ class _DeviceCareScreenState extends ConsumerState<DeviceCareScreen> {
           elevation: 0,
           shadowColor: Colors.transparent,
           splashFactory: NoSplash.splashFactory,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
           padding: EdgeInsets.symmetric(
             horizontal: Responsive.sm,
             vertical: Responsive.xs,
@@ -1107,7 +1210,7 @@ class _DeviceCareScreenState extends ConsumerState<DeviceCareScreen> {
         elevation: 0,
         shadowColor: Colors.transparent,
         splashFactory: NoSplash.splashFactory,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
         padding: EdgeInsets.symmetric(
           horizontal: Responsive.sm,
           vertical: Responsive.xs,
@@ -1532,20 +1635,29 @@ class _DeviceCareScreenState extends ConsumerState<DeviceCareScreen> {
     try {
       final client = authState.client!;
 
+      // Debug logging for passed data
+      developer.log(
+        'Confirmed Order Data - Report#: ${widget.reportOrderNumber}, Device: ${widget.deviceName}',
+        name: 'DeviceCareScreen',
+      );
+
       // Prepare customer data
       final customerData = {
         'first_name': client.name.split(' ').first,
         'last_name': client.name.split(' ').length > 1
             ? client.name.split(' ').skip(1).join(' ')
             : '',
-        'email': client.email ?? '',
+        'email': client.email ?? 'customer@laapak.com', // Default if missing
         'phone': client.phone,
-        'address_1': client.address ?? '',
-        'city': '',
-        'state': '',
-        'postcode': '',
+        'address_1': client.address ?? 'Cairo',
+        'city': 'Cairo', // Required by WooCommerce
+        'state': 'Cairo', // Required
+        'postcode': '11511', // Required
         'country': 'EG',
-        'note': 'Order Code: ${client.orderCode}',
+        'note':
+            'Order Code: ${client.orderCode}'
+            '${widget.reportOrderNumber != null ? '\nReport Order #: ${widget.reportOrderNumber}' : ''}'
+            '${widget.deviceName != null ? '\nDevice: ${widget.deviceName}' : ''}',
       };
 
       // Prepare line items
@@ -1569,17 +1681,55 @@ class _DeviceCareScreenState extends ConsumerState<DeviceCareScreen> {
         // Clear cart
         ref.read(cartProvider.notifier).clearCart();
 
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'تم إنشاء الطلب بنجاح! رقم الطلب: ${order['id']}',
-              style: LaapakTypography.bodyMedium(
-                color: LaapakColors.background,
-              ),
+        // Show success dialog
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(Responsive.cardRadius),
             ),
-            backgroundColor: LaapakColors.success,
-            duration: const Duration(seconds: 4),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.check_circle, color: LaapakColors.success, size: 64),
+                SizedBox(height: Responsive.md),
+                Text(
+                  'تم إنشاء الطلب بنجاح!',
+                  style: LaapakTypography.titleMedium(
+                    color: LaapakColors.textPrimary,
+                  ).copyWith(fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: Responsive.sm),
+                Text(
+                  'رقم الطلب: ${order['id']}',
+                  style: LaapakTypography.bodyMedium(
+                    color: LaapakColors.primary,
+                  ).copyWith(fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: Responsive.sm),
+                Text(
+                  'سيتم التواصل معك قريباً لتأكيد تفاصيل الشحن والدفع.',
+                  style: LaapakTypography.bodySmall(
+                    color: LaapakColors.textSecondary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop(); // Close dialog
+                  Navigator.of(context).pop(); // Return to previous screen
+                },
+                child: Text(
+                  'حسناً',
+                  style: LaapakTypography.button(color: LaapakColors.primary),
+                ),
+              ),
+            ],
           ),
         );
       }
@@ -1588,17 +1738,51 @@ class _DeviceCareScreenState extends ConsumerState<DeviceCareScreen> {
       if (mounted) {
         Navigator.of(context).pop();
 
+        // Determine error message based on exception type
+        String errorMessage;
+        if (e.toString().contains('WooCommerceException')) {
+          // Extract the detailed error from WooCommerceException
+          errorMessage = e.toString();
+        } else if (e.toString().contains('timeout')) {
+          errorMessage = 'انتهت مهلة الاتصال. تحقق من الإنترنت وحاول مرة أخرى';
+        } else if (e.toString().contains('SocketException')) {
+          errorMessage = 'لا يوجد اتصال بالإنترنت. حاول مرة أخرى';
+        } else {
+          errorMessage = 'حدث خطأ أثناء إنشاء الطلب: ${e.toString()}';
+        }
+
+        // Log detailed error for debugging
+        developer.log(
+          '❌ [DeviceCare] Order creation failed',
+          name: 'DeviceCare',
+          error: e,
+        );
+
         // Show error message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'حدث خطأ أثناء إنشاء الطلب: ${e.toString()}',
+              errorMessage,
               style: LaapakTypography.bodyMedium(
                 color: LaapakColors.background,
               ),
             ),
             backgroundColor: LaapakColors.error,
-            duration: const Duration(seconds: 4),
+            duration: const Duration(seconds: 6),
+            action: SnackBarAction(
+              label: 'نسخ الخطأ',
+              textColor: Colors.white,
+              onPressed: () {
+                // Copy error to clipboard for user to share
+                Clipboard.setData(ClipboardData(text: errorMessage));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('تم نسخ تفاصيل الخطأ'),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              },
+            ),
           ),
         );
       }

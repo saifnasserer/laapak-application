@@ -35,12 +35,64 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   VideoPlayerController? _videoController;
   ChewieController? _chewieController;
   int? _currentVideoIndex;
+  PageController? _pageControllerNullable;
+  PageController get _pageController =>
+      _pageControllerNullable ??= PageController(initialPage: _currentStep);
 
   @override
   void initState() {
     super.initState();
     _reportId = widget.reportId;
     debugPrint('📊 Reports Screen initialized with reportId: $_reportId');
+  }
+
+  // ... (keep _initializeFirstVideo as is)
+
+  @override
+  void dispose() {
+    _pageControllerNullable?.dispose();
+    _chewieController?.dispose();
+    _videoController?.dispose();
+    _chewieController = null;
+    _videoController = null;
+    super.dispose();
+  }
+
+  // ...
+
+  /// Step content based on current step
+  Widget _buildStepContent(Map<String, dynamic> reportData, int stepIndex) {
+    switch (stepIndex) {
+      case 0:
+        return ExternalInspectionStep(
+          reportData: reportData,
+          onVideoTap: _playVideo,
+          onImageTap: _showImageGallery,
+          videoController: _videoController,
+          chewieController: _chewieController,
+          currentVideoIndex: _currentVideoIndex,
+          isVideoPlayerSupported: _isVideoPlayerSupported,
+        );
+      case 1:
+        return HardwareStatusStep(reportData: reportData);
+      case 2:
+        return InternalExaminationStep(
+          reportData: reportData,
+          onImageTap: _showImageGallery,
+        );
+      case 3:
+        return OrderConfirmationStep(reportData: reportData);
+      default:
+        return ExternalInspectionStep(
+          reportData: reportData,
+          onVideoTap: _playVideo,
+          onImageTap: _showImageGallery,
+          videoController: _videoController,
+          chewieController: _chewieController,
+          currentVideoIndex: _currentVideoIndex,
+          isVideoPlayerSupported: _isVideoPlayerSupported,
+        );
+    }
   }
 
   /// Initialize first video automatically when report data is available
@@ -95,15 +147,6 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     }
   }
 
-  @override
-  void dispose() {
-    _chewieController?.dispose();
-    _videoController?.dispose();
-    _chewieController = null;
-    _videoController = null;
-    super.dispose();
-  }
-
   bool get _isVideoPlayerSupported {
     // Video player is supported on mobile platforms and web
     if (kIsWeb) return true;
@@ -156,17 +199,20 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       _videoController!
           .initialize()
           .timeout(
-            const Duration(seconds: 30),
+            const Duration(seconds: 60), // Increased to 60s
             onTimeout: () {
-              debugPrint('❌ Video initialization timeout');
+              // Just return normally on timeout to let catchError handle it
+              // without crashing the app or printing scary red error logs prematurely
+              if (!mounted || _currentStep != 0) return;
+              debugPrint('⚠️ Video initialization timed out after 60s');
               throw TimeoutException(
                 'Video loading timeout',
-                const Duration(seconds: 30),
+                const Duration(seconds: 60),
               );
             },
           )
           .then((_) {
-            if (!mounted) return;
+            if (!mounted || _currentStep != 0) return;
 
             debugPrint('✅ Video initialized successfully');
 
@@ -236,7 +282,9 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             debugPrint('   Stack trace: $stackTrace');
             debugPrint('   Video URL: $videoUrl');
 
-            if (mounted) {
+            debugPrint('   Video URL: $videoUrl');
+
+            if (mounted && _currentStep == 0) {
               _chewieController?.dispose();
               _videoController?.dispose();
               _chewieController = null;
@@ -369,125 +417,132 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         child: DismissKeyboard(
           child: Directionality(
             textDirection: TextDirection.rtl, // RTL for Arabic
-            child: CustomScrollView(
-              slivers: [
-                // Sliver AppBar (scrollable header)
-                SliverAppBar(
-                  backgroundColor: LaapakColors.background,
-                  elevation: 0,
-                  pinned: false, // Allow it to scroll away completely
-                  floating: true, // Snap back when scrolling up
-                  centerTitle: true,
-                  leading: IconButton(
-                    icon: Icon(
-                      Icons.arrow_back_ios_outlined,
-                      color: LaapakColors.textPrimary,
-                    ),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                  title: Text(
-                    'التقرير',
-                    style: LaapakTypography.titleLarge(
-                      color: LaapakColors.textPrimary,
-                    ),
-                  ),
-                ),
-
-                // Step Indicator
-                SliverToBoxAdapter(
-                  child: _buildStepIndicator(),
-                ),
-
-                // Step Content
-                reportAsync.when(
-                    data: (reportData) {
-                      if (reportData == null) {
-                      return SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: Center(
-                          child: Padding(
-                            padding: Responsive.screenPaddingV,
-                            child: Text(
-                              'التقرير غير موجود',
-                              style: LaapakTypography.bodyMedium(
-                                color: LaapakColors.textSecondary,
-                              ),
-                              ),
-                            ),
-                          ),
-                        );
-                      }
-
-                      // Debug: Log report data when it's received
-                      debugPrint('📊 Reports Screen - Report Data Received');
-                      debugPrint('   Keys: ${reportData.keys}');
-                      debugPrint('   Full Data: $reportData');
-
-                      // Auto-initialize first video if on external inspection step
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        _initializeFirstVideo(reportData);
-                      });
-
-                    return SliverPadding(
-                        padding: Responsive.screenPadding,
-                      sliver: SliverToBoxAdapter(
-                        child: _buildStepContent(reportData),
+            child: NestedScrollView(
+              headerSliverBuilder: (context, innerBoxIsScrolled) {
+                return [
+                  // Sliver AppBar (scrollable header)
+                  SliverAppBar(
+                    backgroundColor: LaapakColors.background,
+                    elevation: 0,
+                    pinned: false, // Allow it to scroll away completely
+                    floating: true, // Snap back when scrolling up
+                    centerTitle: true,
+                    leading: IconButton(
+                      icon: Icon(
+                        Icons.arrow_back_ios_outlined,
+                        color: LaapakColors.textPrimary,
                       ),
-                      );
-                    },
-                  loading: () => SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        color: LaapakColors.primary,
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                    title: Text(
+                      'التقرير',
+                      style: LaapakTypography.titleLarge(
+                        color: LaapakColors.textPrimary,
                       ),
                     ),
                   ),
-                  error: (error, stackTrace) => SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: Center(
+
+                  // Step Indicator
+                  SliverToBoxAdapter(child: _buildStepIndicator()),
+                ];
+              },
+              body: reportAsync.when(
+                data: (reportData) {
+                  if (reportData == null) {
+                    return Center(
                       child: Padding(
                         padding: Responsive.screenPaddingV,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.error_outline,
-                              size: Responsive.iconSizeXLarge,
-                              color: LaapakColors.error,
-                            ),
-                            SizedBox(height: Responsive.md),
-                            Text(
-                              'حدث خطأ في تحميل التقرير',
-                              style: LaapakTypography.bodyMedium(
-                                color: LaapakColors.error,
-                              ),
-                            ),
-                            SizedBox(height: Responsive.sm),
-                            Text(
-                              error.toString(),
-                              style: LaapakTypography.bodySmall(
-                                color: LaapakColors.textSecondary,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
+                        child: Text(
+                          'التقرير غير موجود',
+                          style: LaapakTypography.bodyMedium(
+                            color: LaapakColors.textSecondary,
+                          ),
                         ),
                       ),
+                    );
+                  }
+
+                  // Auto-initialize first video if on external inspection step
+                  // This runs on initial build if step is 0
+                  if (_currentStep == 0) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _initializeFirstVideo(reportData);
+                    });
+                  }
+
+                  return PageView.builder(
+                    controller: _pageController,
+                    onPageChanged: (index) {
+                      final previousStep = _currentStep;
+                      setState(() {
+                        _currentStep = index;
+                        // Reset video when switching away from step 0
+                        if (previousStep == 0 && index != 0) {
+                          _chewieController?.dispose();
+                          _videoController?.dispose();
+                          _chewieController = null;
+                          _videoController = null;
+                          _currentVideoIndex = null;
+                        }
+                      });
+
+                      // Auto-initialize video if switching back to step 0
+                      if (index == 0 && previousStep != 0) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          _initializeFirstVideo(reportData);
+                        });
+                      }
+                    },
+                    itemCount: 4, // Total steps
+                    itemBuilder: (context, index) {
+                      return SingleChildScrollView(
+                        padding: Responsive.screenPadding,
+                        child: Column(
+                          children: [
+                            _buildStepContent(reportData, index),
+                            _buildNavigationButtons(index),
+                            // Bottom padding
+                            const SizedBox(height: 20),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                },
+                loading: () => Center(
+                  child: CircularProgressIndicator(color: LaapakColors.primary),
+                ),
+                error: (error, stackTrace) => Center(
+                  child: Padding(
+                    padding: Responsive.screenPaddingV,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: Responsive.iconSizeXLarge,
+                          color: LaapakColors.error,
+                        ),
+                        SizedBox(height: Responsive.md),
+                        Text(
+                          'حدث خطأ في تحميل التقرير',
+                          style: LaapakTypography.bodyMedium(
+                            color: LaapakColors.error,
+                          ),
+                        ),
+                        SizedBox(height: Responsive.sm),
+                        Text(
+                          error.toString(),
+                          style: LaapakTypography.bodySmall(
+                            color: LaapakColors.textSecondary,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                     ),
                   ),
                 ),
-
-                // Navigation Buttons
-                SliverToBoxAdapter(
-                  child: _buildNavigationButtons(),
-                ),
-
-                // Bottom padding
-                const SliverToBoxAdapter(
-                  child: SizedBox(height: 20),
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -505,7 +560,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     ];
 
     return Container(
-      padding: Responsive.screenPaddingV,
+      padding: EdgeInsets.symmetric(vertical: Responsive.md, horizontal: 40.0),
       decoration: BoxDecoration(
         color: LaapakColors.surface,
         border: Border(bottom: BorderSide(color: LaapakColors.borderLight)),
@@ -519,31 +574,11 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           return Expanded(
             child: GestureDetector(
               onTap: () {
-                final previousStep = _currentStep;
-                setState(() {
-                  _currentStep = index;
-                  // Reset video when switching away from step 0
-                  if (previousStep == 0 && index != 0) {
-                    _chewieController?.dispose();
-                    _videoController?.dispose();
-                    _chewieController = null;
-                    _videoController = null;
-                    _currentVideoIndex = null;
-                  }
-                });
-                // Auto-initialize video if switching to step 0
-                if (index == 0 && previousStep != 0) {
-                  final reportAsync = ref.read(
-                    reportsProvider(_reportId ?? ''),
-                  );
-                  reportAsync.whenData((reportData) {
-                    if (reportData != null) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        _initializeFirstVideo(reportData);
-                      });
-                    }
-                  });
-                }
+                _pageController.animateToPage(
+                  index,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                );
               },
               child: Column(
                 children: [
@@ -590,46 +625,11 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     );
   }
 
-  /// Step content based on current step
-  Widget _buildStepContent(Map<String, dynamic> reportData) {
-    switch (_currentStep) {
-      case 0:
-        return ExternalInspectionStep(
-          reportData: reportData,
-          onVideoTap: _playVideo,
-          onImageTap: _showImageGallery,
-          videoController: _videoController,
-          chewieController: _chewieController,
-          currentVideoIndex: _currentVideoIndex,
-          isVideoPlayerSupported: _isVideoPlayerSupported,
-        );
-      case 1:
-        return HardwareStatusStep(reportData: reportData);
-      case 2:
-        return InternalExaminationStep(
-          reportData: reportData,
-          onImageTap: _showImageGallery,
-        );
-      case 3:
-        return OrderConfirmationStep(reportData: reportData);
-      default:
-        return ExternalInspectionStep(
-          reportData: reportData,
-          onVideoTap: _playVideo,
-          onImageTap: _showImageGallery,
-          videoController: _videoController,
-          chewieController: _chewieController,
-          currentVideoIndex: _currentVideoIndex,
-          isVideoPlayerSupported: _isVideoPlayerSupported,
-        );
-    }
-  }
-
   /// Navigation buttons (Previous/Next)
-  Widget _buildNavigationButtons() {
+  Widget _buildNavigationButtons(int stepIndex) {
     final totalSteps = 4;
-    final canGoPrevious = _currentStep > 0;
-    final canGoNext = _currentStep < totalSteps - 1;
+    final canGoPrevious = stepIndex > 0;
+    final canGoNext = stepIndex < totalSteps - 1;
 
     return Container(
       padding: Responsive.screenPadding,
@@ -645,38 +645,17 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             icon: Icons.arrow_back_ios_outlined,
             onPressed: canGoPrevious
                 ? () {
-                    final previousStep = _currentStep;
-                    setState(() {
-                      _currentStep--;
-                    });
-                    // Dispose video controllers when leaving step 0
-                    if (previousStep == 0 && _currentStep != 0) {
-                      _chewieController?.dispose();
-                      _videoController?.dispose();
-                      _chewieController = null;
-                      _videoController = null;
-                      _currentVideoIndex = null;
-                    }
-                    // Auto-initialize video if switching to step 0
-                    if (_currentStep == 0 && previousStep != 0) {
-                      final reportAsync = ref.read(
-                        reportsProvider(_reportId ?? ''),
-                      );
-                      reportAsync.whenData((reportData) {
-                        if (reportData != null) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            _initializeFirstVideo(reportData);
-                          });
-                        }
-                      });
-                    }
+                    _pageController.previousPage(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    );
                   }
                 : null,
           ),
 
           // Step Indicator Text
           Text(
-            '${_currentStep + 1} / $totalSteps',
+            '${stepIndex + 1} / $totalSteps',
             style: LaapakTypography.bodyMedium(
               color: LaapakColors.textSecondary,
             ),
@@ -687,31 +666,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             icon: Icons.arrow_forward_ios_outlined,
             onPressed: canGoNext
                 ? () {
-                    final previousStep = _currentStep;
-                    setState(() {
-                      _currentStep++;
-                    });
-                    // Dispose video controllers when leaving step 0
-                    if (previousStep == 0 && _currentStep != 0) {
-                      _chewieController?.dispose();
-                      _videoController?.dispose();
-                      _chewieController = null;
-                      _videoController = null;
-                      _currentVideoIndex = null;
-                    }
-                    // Auto-initialize video if switching to step 0
-                    if (_currentStep == 0 && previousStep != 0) {
-                      final reportAsync = ref.read(
-                        reportsProvider(_reportId ?? ''),
-                      );
-                      reportAsync.whenData((reportData) {
-                        if (reportData != null) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            _initializeFirstVideo(reportData);
-                          });
-                        }
-                      });
-                    }
+                    _pageController.nextPage(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    );
                   }
                 : null,
           ),

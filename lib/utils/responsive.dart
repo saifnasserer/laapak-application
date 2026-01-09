@@ -97,7 +97,7 @@ class Responsive {
   );
 
   /// Button border radius
-  static const double buttonRadius = 12.0;
+  static const double buttonRadius = 30.0;
 
   // ==================== Input Field Sizing ====================
 

@@ -27,7 +27,7 @@ class LaapakApp extends ConsumerWidget {
     final authState = ref.watch(authProvider);
 
     // Show loading screen while checking session
-    if (authState.isLoading) {
+    if (authState.isInitializing) {
       return MaterialApp(
         title: 'Laapak',
         debugShowCheckedModeBanner: false,
