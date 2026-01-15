@@ -6,15 +6,9 @@ class CartItem {
   final ProductModel product;
   final int quantity;
 
-  CartItem({
-    required this.product,
-    this.quantity = 1,
-  });
+  CartItem({required this.product, this.quantity = 1});
 
-  CartItem copyWith({
-    ProductModel? product,
-    int? quantity,
-  }) {
+  CartItem copyWith({ProductModel? product, int? quantity}) {
     return CartItem(
       product: product ?? this.product,
       quantity: quantity ?? this.quantity,
@@ -27,17 +21,29 @@ class CartItem {
 /// Cart State
 class CartState {
   final List<CartItem> items;
+  final String? reportOrderNumber;
+  final String? deviceName;
 
-  CartState({List<CartItem>? items}) : items = items ?? [];
+  CartState({List<CartItem>? items, this.reportOrderNumber, this.deviceName})
+    : items = items ?? [];
 
-  CartState copyWith({List<CartItem>? items}) {
-    return CartState(items: items ?? this.items);
+  CartState copyWith({
+    List<CartItem>? items,
+    String? reportOrderNumber,
+    String? deviceName,
+  }) {
+    return CartState(
+      items: items ?? this.items,
+      reportOrderNumber: reportOrderNumber ?? this.reportOrderNumber,
+      deviceName: deviceName ?? this.deviceName,
+    );
   }
 
   int get itemCount => items.fold(0, (sum, item) => sum + item.quantity);
-  
-  double get totalPrice => items.fold(0.0, (sum, item) => sum + item.totalPrice);
-  
+
+  double get totalPrice =>
+      items.fold(0.0, (sum, item) => sum + item.totalPrice);
+
   bool get isEmpty => items.isEmpty;
   bool get isNotEmpty => items.isNotEmpty;
 }
@@ -47,30 +53,38 @@ class CartNotifier extends StateNotifier<CartState> {
   CartNotifier() : super(CartState());
 
   /// Add product to cart
-  void addToCart(ProductModel product) {
+  void addToCart(
+    ProductModel product, {
+    String? reportOrderNumber,
+    String? deviceName,
+  }) {
     final existingIndex = state.items.indexWhere(
       (item) => item.product.id == product.id,
     );
 
+    List<CartItem> updatedItems;
     if (existingIndex >= 0) {
       // Increase quantity if product already in cart
       final existingItem = state.items[existingIndex];
-      final updatedItems = List<CartItem>.from(state.items);
+      updatedItems = List<CartItem>.from(state.items);
       updatedItems[existingIndex] = existingItem.copyWith(
         quantity: existingItem.quantity + 1,
       );
-      state = CartState(items: updatedItems);
     } else {
       // Add new item to cart
-      state = CartState(
-        items: [...state.items, CartItem(product: product)],
-      );
+      updatedItems = [...state.items, CartItem(product: product)];
     }
+
+    state = state.copyWith(
+      items: updatedItems,
+      reportOrderNumber: reportOrderNumber ?? state.reportOrderNumber,
+      deviceName: deviceName ?? state.deviceName,
+    );
   }
 
   /// Remove product from cart
   void removeFromCart(String productId) {
-    state = CartState(
+    state = state.copyWith(
       items: state.items.where((item) => item.product.id != productId).toList(),
     );
   }
@@ -89,7 +103,7 @@ class CartNotifier extends StateNotifier<CartState> {
       return item;
     }).toList();
 
-    state = CartState(items: updatedItems);
+    state = state.copyWith(items: updatedItems);
   }
 
   /// Clear cart
@@ -106,7 +120,9 @@ class CartNotifier extends StateNotifier<CartState> {
   int getQuantity(String productId) {
     final item = state.items.firstWhere(
       (item) => item.product.id == productId,
-      orElse: () => CartItem(product: ProductModel(id: '', name: '', description: '', imageUrl: '')),
+      orElse: () => CartItem(
+        product: ProductModel(id: '', name: '', description: '', imageUrl: ''),
+      ),
     );
     return item.quantity;
   }
@@ -116,4 +132,3 @@ class CartNotifier extends StateNotifier<CartState> {
 final cartProvider = StateNotifierProvider<CartNotifier, CartState>((ref) {
   return CartNotifier();
 });
-

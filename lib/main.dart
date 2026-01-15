@@ -6,6 +6,7 @@ import 'theme/theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/notification_provider.dart';
 import 'services/navigation_service.dart';
+import 'widgets/cart_overlay.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,6 +42,9 @@ class LaapakApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: LaapakTheme.lightTheme,
       navigatorKey: NavigationService.instance.navigatorKey,
+      builder: (context, child) {
+        return CartOverlay(child: child!);
+      },
       home: authState.isAuthenticated
           ? const OrderScreen()
           : const LoginScreen(),

@@ -11,6 +11,7 @@ import '../../widgets/empty_state.dart';
 import '../../providers/reports_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/notification_provider.dart';
+import '../../providers/cart_provider.dart';
 import '../../services/share_service.dart';
 import '../reports/reports_screen.dart';
 import '../reports/reports_list_screen.dart';
@@ -830,7 +831,9 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
             );
 
             if (shouldLogout == true) {
-              // Perform logout
+              // Clear cart first
+              ref.read(cartProvider.notifier).clearCart();
+              // Then logout
               await ref.read(authProvider.notifier).logout();
               // The main.dart will automatically navigate to LoginScreen
               // when authState.isAuthenticated becomes false

@@ -8,13 +8,26 @@ import '../../device_care/device_care_screen.dart';
 /// Order Confirmation Step Widget
 ///
 /// Displays order confirmation details
-class OrderConfirmationStep extends StatelessWidget {
+class OrderConfirmationStep extends StatefulWidget {
   final Map<String, dynamic> reportData;
 
   const OrderConfirmationStep({super.key, required this.reportData});
 
   @override
+  State<OrderConfirmationStep> createState() => _OrderConfirmationStepState();
+}
+
+class _OrderConfirmationStepState extends State<OrderConfirmationStep>
+    with AutomaticKeepAliveClientMixin {
+  bool _isConfirmed = false;
+
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context);
+    final reportData = widget.reportData;
     final deviceModel = reportData['device_model']?.toString() ?? 'غير محدد';
     final serialNumber = reportData['serial_number']?.toString() ?? 'غير محدد';
     final inspectionDate =
@@ -41,7 +54,8 @@ class OrderConfirmationStep extends StatelessWidget {
     // Status text in Arabic
     String statusText = status;
     Color statusColor = LaapakColors.textSecondary;
-    switch (status.toLowerCase()) {
+    final normalizedStatus = status.toLowerCase();
+    switch (normalizedStatus) {
       case 'active':
         statusText = 'نشط';
         statusColor = LaapakColors.success;
@@ -55,6 +69,8 @@ class OrderConfirmationStep extends StatelessWidget {
         statusColor = LaapakColors.error;
         break;
     }
+
+    final isReportCompleted = normalizedStatus == 'completed';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -142,19 +158,25 @@ class OrderConfirmationStep extends StatelessWidget {
         SizedBox(
           height: Responsive.buttonHeight,
           child: ElevatedButton.icon(
-            onPressed: () => _confirmOrderOnWhatsApp(context),
+            onPressed: isReportCompleted ? null : () => _confirmOrder(context),
             icon: Icon(
-              Icons.check_circle_outline,
+              (isReportCompleted || _isConfirmed)
+                  ? Icons.check_circle
+                  : Icons.check_circle_outline,
               size: Responsive.iconSizeMedium,
               color: Colors.white,
             ),
             label: Text(
-              'تأكيد الطلب',
+              isReportCompleted
+                  ? 'تم اكتمال الطلب'
+                  : (_isConfirmed ? 'تم التأكيد' : 'تأكيد الطلب'),
               style: LaapakTypography.button(color: Colors.white),
             ),
             style:
                 ElevatedButton.styleFrom(
-                  backgroundColor: LaapakColors.primary,
+                  backgroundColor: (isReportCompleted || _isConfirmed)
+                      ? LaapakColors.success
+                      : LaapakColors.primary,
                   elevation: 0,
                   shadowColor: Colors.transparent,
                   splashFactory: NoSplash.splashFactory,
@@ -247,6 +269,14 @@ class OrderConfirmationStep extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// Helper to handle order confirmation
+  void _confirmOrder(BuildContext context) {
+    setState(() {
+      _isConfirmed = true;
+    });
+    _confirmOrderOnWhatsApp(context);
   }
 
   /// Open WhatsApp to confirm order

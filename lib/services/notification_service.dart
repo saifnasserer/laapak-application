@@ -186,49 +186,63 @@ class NotificationService {
         return false;
       }
 
-      // Check if permission is already granted (unless forcing request)
-      if (!forceRequest) {
-        final bool? granted = await androidImplementation
-            .areNotificationsEnabled();
+      // Check if permission is already granted first
+      final bool? granted = await androidImplementation
+          .areNotificationsEnabled();
 
-        if (granted == true) {
-          developer.log(
-            '✅ Notification permissions already granted',
-            name: 'Notifications',
-          );
-          return true;
-        }
+      if (granted == true && !forceRequest) {
+        developer.log(
+          '✅ Notification permissions already granted',
+          name: 'Notifications',
+        );
+        return true;
       }
 
-      // Always try to request permission - this will show the system dialog
+      // Request permission - this will show the system dialog on Android 13+
       developer.log(
-        '📱 Requesting notification permission (showing system dialog)...',
+        '📱 Requesting notification permission...',
         name: 'Notifications',
       );
 
       final bool? result = await androidImplementation
           .requestNotificationsPermission();
 
+      developer.log(
+        '📱 Permission request result: $result',
+        name: 'Notifications',
+      );
+
       // Wait a moment for the system to update permission status
-      await Future.delayed(const Duration(milliseconds: 300));
+      await Future.delayed(const Duration(milliseconds: 500));
 
       // Check the actual permission status after requesting
       final bool? currentStatus = await androidImplementation
           .areNotificationsEnabled();
 
-      if (result == true || currentStatus == true) {
+      developer.log(
+        '📱 Current permission status after request: $currentStatus',
+        name: 'Notifications',
+      );
+
+      if (currentStatus == true) {
         developer.log(
-          '✅ Notification permissions granted via dialog',
+          '✅ Notification permissions granted',
           name: 'Notifications',
         );
         return true;
-      } else {
+      } else if (currentStatus == false) {
         developer.log(
-          '⚠️ Notification permissions denied - user may need to enable in settings',
+          '⚠️ Notification permissions denied by user',
           name: 'Notifications',
         );
-        // Return null to indicate we should offer to open settings
+        // Return null to indicate user denied and may need to enable in settings
         return null;
+      } else {
+        developer.log(
+          '⚠️ Notification permission status unclear',
+          name: 'Notifications',
+        );
+        return false;
       }
     } catch (e) {
       developer.log(

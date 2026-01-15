@@ -66,7 +66,7 @@ class NotificationPermissionDialog extends StatelessWidget {
 
               // Instructions
               Text(
-                'لتفعيل الإشعارات، يرجى اتباع الخطوات التالية:',
+                'عشان كل حاجة تمشي تمام و تقدر تستقبل إشعاراتنا، محتاجين نفعّل الصلاحيات من الإعدادات.',
                 style: LaapakTypography.bodyMedium(
                   color: LaapakColors.textSecondary,
                 ),
@@ -76,20 +76,14 @@ class NotificationPermissionDialog extends StatelessWidget {
               SizedBox(height: Responsive.lg),
 
               // Steps
-              _buildStep(
-                number: 1,
-                text: 'اضغط على زر "فتح الإعدادات" أدناه',
-              ),
+              _buildStep(number: 1, text: 'اضغط على زر "فتح الإعدادات" أدناه'),
               SizedBox(height: Responsive.md),
               _buildStep(
                 number: 2,
-                text: 'ابحث عن "الإشعارات" أو "Notifications"',
+                text: 'دور على قسم "الإشعارات" أو "Notifications"',
               ),
               SizedBox(height: Responsive.md),
-              _buildStep(
-                number: 3,
-                text: 'فعّل الإشعارات للتطبيق',
-              ),
+              _buildStep(number: 3, text: 'فعّل الإشعارات للتطبيق'),
 
               SizedBox(height: Responsive.xl),
 
@@ -103,16 +97,10 @@ class NotificationPermissionDialog extends StatelessWidget {
                       type: AppSettingsType.notification,
                     );
                   },
-                  icon: Icon(
-                    Icons.settings,
-                    color: Colors.white,
-                    size: 20,
-                  ),
+                  icon: Icon(Icons.settings, color: Colors.white, size: 20),
                   label: Text(
                     'فتح الإعدادات',
-                    style: LaapakTypography.button(
-                      color: Colors.white,
-                    ),
+                    style: LaapakTypography.button(color: Colors.white),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: LaapakColors.primary,
@@ -122,7 +110,9 @@ class NotificationPermissionDialog extends StatelessWidget {
                       vertical: Responsive.md,
                     ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(Responsive.buttonRadius),
+                      borderRadius: BorderRadius.circular(
+                        Responsive.buttonRadius,
+                      ),
                     ),
                   ),
                 ),
@@ -166,9 +156,7 @@ class NotificationPermissionDialog extends StatelessWidget {
           child: Center(
             child: Text(
               '$number',
-              style: LaapakTypography.labelMedium(
-                color: Colors.white,
-              ),
+              style: LaapakTypography.labelMedium(color: Colors.white),
             ),
           ),
         ),
@@ -188,4 +176,3 @@ class NotificationPermissionDialog extends StatelessWidget {
     );
   }
 }
-

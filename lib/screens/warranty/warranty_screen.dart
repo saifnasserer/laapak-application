@@ -9,6 +9,7 @@ import '../../providers/notification_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/laapak_api_service.dart';
 import '../../services/notification_service.dart';
+import '../../widgets/notification_permission_dialog.dart';
 
 /// Warranty Tracker Screen
 ///
@@ -1117,7 +1118,20 @@ class _WarrantyScreenState extends ConsumerState<WarrantyScreen> {
                           final result = await notificationService
                               .requestPermissions(forceRequest: true);
                           ref.invalidate(notificationPermissionsStatusProvider);
-                          if (result != true) return;
+                          await Future.delayed(
+                            const Duration(milliseconds: 300),
+                          );
+
+                          // Check if permission was actually granted
+                          final isNowEnabled = await notificationService
+                              .areNotificationsEnabled();
+                          if (result != true && isNowEnabled != true) {
+                            // Permission denied - show settings dialog
+                            if (mounted) {
+                              await NotificationPermissionDialog.show(context);
+                            }
+                            return;
+                          }
                         }
 
                         // Update preference

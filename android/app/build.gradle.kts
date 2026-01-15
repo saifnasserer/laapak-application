@@ -87,11 +87,13 @@ android {
 
     buildTypes {
         release {
-            // Enable code shrinking, obfuscation, and optimization
-            isMinifyEnabled = true
-            isShrinkResources = true
+            // Minification disabled to preserve notification permission functionality
+            // ProGuard/R8 optimization breaks the permission request dialog even with keep rules
+            // App size impact: ~5MB (59MB → 64MB) - acceptable trade-off for working permissions
+            isMinifyEnabled = false
+            isShrinkResources = false
             
-            // Use ProGuard rules
+            // ProGuard rules file (not actively used but kept for reference)
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

@@ -69,8 +69,39 @@
 # Keep secure storage
 -keep class com.it_nomads.fluttersecurestorage.** { *; }
 
-# Keep local notifications
--keep class com.dexterous.flutterlocalnotifications.** { *; }
+# Keep local notifications - AGGRESSIVE RULES to prevent R8 from breaking permissions
+# Keep ALL classes in the flutter_local_notifications plugin
+-keep class com.dexterous.** { *; }
+-keep interface com.dexterous.** { *; }
+-keep enum com.dexterous.** { *; }
+
+# Prevent obfuscation and dead code removal for notification classes
+-keepnames class com.dexterous.** { *; }
+
+# Don't warn about notification classes
+-dontwarn com.dexterous.**
+
+# Keep AndroidX notification and permission classes - CRITICAL for Android 13+
+-keep class androidx.core.app.NotificationCompat** { *; }
+-keep class androidx.core.app.NotificationManagerCompat** { *; }
+-keep class androidx.core.app.ActivityCompat** { *; }
+-keep class androidx.core.content.ContextCompat** { *; }
+-keep interface androidx.core.app.** { *; }
+
+# Keep Android notification framework classes
+-keep class android.app.Notification** { *; }
+-keep class android.app.NotificationChannel** { *; }
+-keep class android.app.NotificationManager** { *; }
+-keep class android.app.PendingIntent** { *; }
+-keep class android.content.pm.PackageManager** { *; }
+
+# Prevent optimization of permission-related methods
+-keepclassmembers class * {
+    *** requestPermission*(...);
+    *** checkPermission*(...);
+    *** areNotificationsEnabled(...);
+    *** requestNotificationsPermission(...);
+}
 
 # Keep cached network image
 -keep class com.github.bluefireteam.images.** { *; }
